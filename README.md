@@ -1,5 +1,4 @@
 # Andrew's Web Starter Kit :metal:
-
 ## Prerequisites
 1. [Node.js][node-url] - used to run JavaScript tools from the command line.
 2. [Yarn][yarn-url] - Fast, reliable, and secure dependency management.
@@ -10,6 +9,13 @@
 2. Go to extracted directory
 3. Open terminal & type ```yarn && backed -s```
 
+## Workflow
+1. Open terminal
+2. Start reload server (watcher) ```backed -w```
+3. Make changes
+
+![hero-url]
+
 ## License
 
 Copyright (c) 2017 VandeurenGlenn <vandeurenglenn@gmail.com>
@@ -19,3 +25,4 @@ All rights reserved.
 [yarn-url]: https://yarnpkg.com
 [backed-cli-url]: https://github.com/VandeurenGlenn/backed-cli
 [zip-url]: https://github.com/VandeurenGlenn/andrews-web-starter-kit/archive/master.zip
+[hero-url]: hero.png
