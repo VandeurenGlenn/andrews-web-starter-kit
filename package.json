@@ -1,0 +1,23 @@
+{
+  "name": "andrews-web-starter-kit",
+  "version": "0.1.0",
+  "main": "index.js",
+  "repository": "https://github.com/vandeurenglenn/andrews-web-starter-kit",
+  "author": "Glenn Vandeuren",
+  "license": "MIT",
+  "flat": true,
+  "backed": {
+    "server": {
+      "demo": "./"
+    }
+  },
+  "dependencies": {
+    "backed": "^0.9.0-preview.2",
+    "custom-app-layout": "next",
+    "custom-header": "^0.9.0-preview",
+    "custom-pages": "^0.9.0-preview"
+  },
+  "resolutions": {
+    "backed": "0.9.0-preview.3"
+  }
+}
