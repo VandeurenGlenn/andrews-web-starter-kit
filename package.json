@@ -6,6 +6,9 @@
   "author": "Glenn Vandeuren",
   "license": "MIT",
   "flat": true,
+  "scripts": {
+    "deploy": "sh build-scripts/gh-pages.sh"
+  },
   "backed": {
     "uglify": true,
     "bundles": [
