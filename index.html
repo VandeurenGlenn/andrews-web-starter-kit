@@ -3,6 +3,20 @@
   <head>
     <meta charset="utf-8">
     <title>Andrew's Web Starter Kit (awsk)</title>
+    <meta name="description" content="">
+
+    <!-- Mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Chrome / Android -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="black">
+    <link rel="icon" href="icon.png">
+
+    <!-- Safari / iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" href="apple-touch-icon.png">
     <style>
       html, body {
         width: 100%;
@@ -15,9 +29,12 @@
     <script type="module">
       import './src/awsk-shell.js';
     </script>
+    <!-- support browsers without es6-module support -->
+    <script src="dist/awsk-shell.min.js" nomodule></script>
   </head>
   <body>
     <!-- properties can be set using attributes, check the title property in awsk-shell ... -->
     <awsk-shell title="awsk"></awsk-shell>
-  </body>
+  	<script src="/reload/reload.js"></script>
+</body>
 </html>

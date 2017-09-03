@@ -14,13 +14,13 @@ custom-app-layout@next:
   dependencies:
     backed "^0.9.0-preview.2"
 
-custom-header@^0.9.0-preview:
-  version "0.9.0-preview"
-  resolved "https://registry.yarnpkg.com/custom-header/-/custom-header-0.9.0-preview.tgz#8203f9cdbf82ab36509cfbf0594f1ffe20228f54"
+custom-header@next:
+  version "0.9.0-preview.1"
+  resolved "https://registry.yarnpkg.com/custom-header/-/custom-header-0.9.0-preview.1.tgz#07b9817647e6ec3cdf5f74f34a9f41ca69030245"
   dependencies:
     backed next
 
-custom-pages@^0.9.0-preview:
+custom-pages@next:
   version "0.9.0-preview"
   resolved "https://registry.yarnpkg.com/custom-pages/-/custom-pages-0.9.0-preview.tgz#408b885556a1e99f473ad1074eee397459facc24"
   dependencies:
