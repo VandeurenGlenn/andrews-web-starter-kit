@@ -1,588 +1,607 @@
-var AWSK = (function () {
-'use strict';
+var AwskShell = (function () {
+  'use strict';
 
-function html$1(e, ...t) {
-  let s = templates.get(e);return void 0 === s && (s = new Template(e), templates.set(e, s)), new TemplateResult(s, t);
-}function render(e, t) {
-  let s = t.__templateInstance;if (void 0 !== s && s.template === e.template && s instanceof TemplateInstance) return void s.update(e.values);s = new TemplateInstance(e.template), t.__templateInstance = s;const n = s._clone();for (s.update(e.values); t.firstChild;) t.removeChild(t.firstChild);t.appendChild(n);
-}const templates = new Map();class TemplateResult {
-  constructor(e, t) {
-    this.template = e, this.values = t;
+  const charIt = (chars, string) => `${chars[0]}${string}${chars[1]}`;
+
+  // let offset = 0;
+
+  /**
+   * @param {object} element HTMLElement
+   * @param {function} template custom-html templateResult
+   * @param {object} properties {}
+   */
+  var render = (element, template, properties = {}) => {
+    let offset = 0;
+    const result = template(properties);
+    if (element.shadowRoot) element = element.shadowRoot;
+    if (!element.innerHTML) {
+      element.innerHTML = result.template;
+    }
+    const length = element.innerHTML.length;
+    result.changes.forEach(change => {
+      const position = change.from.position;
+      const chars = [
+        element.innerHTML.charAt(((position[0] - 1) + offset)),
+        element.innerHTML.charAt(((position[1]) + offset))
+      ];
+      element.innerHTML = element.innerHTML.replace(
+        charIt(chars, change.from.value), charIt(chars, change.to.value)
+      );
+      offset = element.innerHTML.length - length;
+    });
+    return;
   }
-}const exprMarker = "{{}}";class TemplatePart {
-  constructor(e, t, s, n, r) {
-    this.type = e, this.index = t, this.name = s, this.rawName = n, this.strings = r;
-  }
-}class Template {
-  constructor(e) {
-    this.parts = [], this._strings = e, this._parse();
-  }_parse() {
-    this.element = document.createElement("template"), this.element.innerHTML = this._getTemplateHtml(this._strings);const e = document.createTreeWalker(this.element.content, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);let t = -1,
-        s = 0;const n = [],
-          r = [];for (; e.nextNode();) {
-      t++;const i = e.currentNode;if (i.nodeType === Node.ELEMENT_NODE) {
-        const e = i.attributes;for (let n = 0; n < e.length; n++) {
-          const i = e.item(n),
-                o = i.value.split(exprMarker);if (o.length > 1) {
-            const e = this._strings[s],
-                  n = e.substring(0, e.length - o[0].length).match(/((?:\w|[.\-_$])+)=["']?$/)[1];this.parts.push(new TemplatePart("attribute", t, i.name, n, o)), r.push(i), s += o.length - 1;
+
+  // TODO: check for change & render change only
+  const set = [];
+
+  /**
+   *
+   * @example
+   ```js
+    const template = html`<h1>${'name'}</h1>`;
+    let templateResult = template({name: 'Olivia'})
+    element.innerHTML = templateResult.template;
+    templateResult = template({name: 'Jon'})
+    element.innerHTML = templateResult.template;
+
+    // you can also update the changes only
+    templateResult.changes.forEach(change => {
+      change.from.value // previous value
+      change.from.position // previous position
+      change.to.value // new value
+      change.to.position // new position
+      // check https://github.com/vandeurenglenn/custom-renderer for an example how to implement.
+    });
+
+   ```
+   */
+  const html$1 = (strings, ...keys) => {
+    return ((...values) => {
+      const dict = values[values.length - 1] || {};
+      let template = strings[0];
+      const changes = [];
+      if (values[0] !== undefined) {
+        keys.forEach((key, i) => {
+          let value = Number.isInteger(key) ? values[key] : dict[key];
+          if (value === undefined && Array.isArray(key)) {
+            value = key.join('');
+          } else if (value === undefined && !Array.isArray(key) && set[i]) {
+            value = set[i].value; // set previous value, doesn't require developer to pass all properties
+          } else if (value === undefined && !Array.isArray(key) && !set[i]) {
+            value = '';
           }
-        }
-      } else if (i.nodeType === Node.TEXT_NODE) {
-        const e = i.nodeValue.split(exprMarker);if (e.length > 1) {
-          s += e.length - 1;for (let s = 0; s < e.length; s++) {
-            const n = e[s],
-                  r = new Text(n);i.parentNode.insertBefore(r, i), t++, s < e.length - 1 && (i.parentNode.insertBefore(new Text(), i), i.parentNode.insertBefore(new Text(), i), this.parts.push(new TemplatePart("node", t)), t += 2);
-          }t--, n.push(i);
-        } else i.nodeValue.trim() || (n.push(i), t--);
-      }
-    }for (const e of n) e.parentNode.removeChild(e);for (const e of r) e.ownerElement.removeAttribute(e.name);
-  }_getTemplateHtml(e) {
-    const t = [];for (let s = 0; s < e.length; s++) t.push(e[s]), s < e.length - 1 && t.push(exprMarker);return t.join("");
-  }
-}class Part {
-  constructor(e) {
-    this.instance = e;
-  }_getValue(e) {
-    if ("function" == typeof e) try {
-      e = e(this);
-    } catch (e) {
-      return void console.error(e);
-    }if (null !== e) return e;
-  }
-}class AttributePart extends Part {
-  constructor(e, t, s, n) {
-    super(e), console.assert(t.nodeType === Node.ELEMENT_NODE), this.element = t, this.name = s, this.strings = n;
-  }setValue(e) {
-    const t = this.strings;let s = "";for (let n = 0; n < t.length; n++) if (s += t[n], n < t.length - 1) {
-      const t = this._getValue(e[n]);if (t && "string" != typeof t && t[Symbol.iterator]) for (const e of t) s += e;else s += t;
-    }this.element.setAttribute(this.name, s);
-  }get size() {
-    return this.strings.length - 1;
-  }
-}class NodePart extends Part {
-  constructor(e, t, s) {
-    super(e), this.startNode = t, this.endNode = s;
-  }setValue(e) {
-    (e = this._getValue(e)) instanceof Node ? this._previousValue = this._setNodeValue(e) : e instanceof TemplateResult ? this._previousValue = this._setTemplateResultValue(e) : e && void 0 !== e.then ? (e.then(t => {
-      this._previousValue === e && this.setValue(t);
-    }), this._previousValue = e) : e && "string" != typeof e && e[Symbol.iterator] ? this._previousValue = this._setIterableValue(e) : this.startNode.nextSibling === this.endNode.previousSibling && this.startNode.nextSibling.nodeType === Node.TEXT_NODE ? (this.startNode.nextSibling.textContent = e, this._previousValue = e) : this._previousValue = this._setTextValue(e);
-  }_insertNodeBeforeEndNode(e) {
-    this.endNode.parentNode.insertBefore(e, this.endNode);
-  }_setNodeValue(e) {
-    return this.clear(), this._insertNodeBeforeEndNode(e), e;
-  }_setTextValue(e) {
-    return this._setNodeValue(new Text(e));
-  }_setTemplateResultValue(e) {
-    let t;return this._previousValue && this._previousValue._template === e.template ? t = this._previousValue : (t = this.instance._createInstance(e.template), this._setNodeValue(t._clone())), t.update(e.values), t;
-  }_setIterableValue(e) {
-    let t,
-        s = this.startNode;const n = e[Symbol.iterator](),
-          r = Array.isArray(this._previousValue) ? this._previousValue : void 0;let i = 0;const o = [];let a = n.next(),
-        l = n.next();for (a.done && this.clear(); !a.done;) {
-      let e;void 0 !== r && i < r.length ? (e = r[i++], l.done && e.endNode !== this.endNode && (this.clear(e.endNode.previousSibling), e.endNode = this.endNode), t = e.endNode) : (l.done ? t = this.endNode : (t = new Text(), this._insertNodeBeforeEndNode(t)), e = new NodePart(this.instance, s, t)), e.setValue(a.value), o.push(e), a = l, l = n.next(), s = t;
-    }return o;
-  }clear(e = this.startNode) {
-    this._previousValue = void 0;let t = e.nextSibling;for (; null !== t && t !== this.endNode;) {
-      let e = t.nextSibling;t.parentNode.removeChild(t), t = e;
-    }
-  }
-}class TemplateInstance {
-  constructor(e) {
-    this._parts = [], this._template = e;
-  }get template() {
-    return this._template;
-  }update(e) {
-    let t = 0;for (const s of this._parts) void 0 === s.size ? s.setValue(e[t++]) : (s.setValue(e.slice(t, t + s.size)), t += s.size);
-  }_clone() {
-    const e = document.importNode(this._template.element.content, !0);if (this._template.parts.length > 0) {
-      const t = document.createTreeWalker(e, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT),
-            s = this._template.parts;let n = 0,
-          r = 0,
-          i = s[0],
-          o = t.nextNode();for (; null != o && r < s.length;) n === i.index ? (this._parts.push(this._createPart(i, o)), i = s[++r]) : (n++, o = t.nextNode());
-    }return e;
-  }_createPart(e, t) {
-    if ("attribute" === e.type) return new AttributePart(this, t, e.name, e.strings);if ("node" === e.type) return new NodePart(this, t, t.nextSibling);throw new Error(`unknown part type: ${e.type}`);
-  }_createInstance(e) {
-    return new TemplateInstance(e);
-  }
-}window.html = window.html || html$1, window.Backed = window.Backed || {}, window.Backed.Renderer = window.Backed.Renderer || render;var litMixin$1 = e => class t extends e {
-  get propertyStore() {
-    return window.Backed.PropertyStore;
-  }constructor(e = {}) {
-    if (super(e), this.attachShadow({ mode: "open" }), !this._isValidRenderer(this.render)) throw "Invalid renderer!";if (!this.render) throw "Missing render method!";render(this.render(), this.shadowRoot);
-  }_isValidRenderer(e) {
-    if (e) return String(e).includes("return html`");
-  }
-};
+          const string = strings[i + 1];
+          const stringLength = string.length;
+          const start = template.length;
+          const end = template.length + value.length;
+          const position = [start, end];
 
-window.Backed = window.Backed || {}, window.Backed.PropertyStore = window.Backed.PropertyStore || new Map();const render$1 = window.Backed.Renderer;var propertyMixin$1 = e => class r extends e {
-  constructor(e = {}) {
-    super(e), this.properties = e.properties;
-  }connectedCallback() {
-    if (this.properties) for (const e of Object.entries(this.properties)) {
-      const { observer: r, reflect: t, renderer: i } = e[1];(r || t || i) && (i && !render$1 && console.warn("Renderer undefined"), this.defineProperty(e[0], e[1]));
-    }
-  }defineProperty(e = null, { strict: r = !1, observer: t, reflect: i = !1, renderer: n, value: s }) {
-    Object.defineProperty(this, e, { set(r) {
-        r !== this[`___${e}`] && (this[`___${e}`] = r, i && (r ? this.setAttributte(e, String(r)) : this.removeAttribute(e)), t && (t in this ? this[t]() : console.warn(`observer::${t} undefined`)), n && (n in this ? render$1(this[n](), this.shadowRoot) : console.warn(`renderer::${n} undefined`)));
-      }, get() {
-        return this[`___${e}`];
-      }, configurable: !r });const o = this.getAttribute(e);this[e] = o || this.hasAttribute(e) || s;
-  }
-};
-
-/**
- * @license
- * Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
- * This code may only be used under the BSD style license found at
- * http://polymer.github.io/LICENSE.txt
- * The complete set of authors may be found at
- * http://polymer.github.io/AUTHORS.txt
- * The complete set of contributors may be found at
- * http://polymer.github.io/CONTRIBUTORS.txt
- * Code distributed by Google as part of the polymer project is also
- * subject to an additional IP rights grant found at
- * http://polymer.github.io/PATENTS.txt
- */
-const templates$1 = new Map();
-function html$2(strings, ...values) {
-    let template = templates$1.get(strings);
-    if (template === undefined) {
-        template = new Template$1(strings);
-        templates$1.set(strings, template);
-    }
-    return new TemplateResult$1(template, values);
-}
-class TemplateResult$1 {
-    constructor(template, values) {
-        this.template = template;
-        this.values = values;
-    }
-}
-function render$2(result, container) {
-    let instance = container.__templateInstance;
-    if (instance !== undefined && instance.template === result.template && instance instanceof TemplateInstance$1) {
-        instance.update(result.values);
-        return;
-    }
-    instance = new TemplateInstance$1(result.template);
-    container.__templateInstance = instance;
-    const fragment = instance._clone();
-    instance.update(result.values);
-    while (container.firstChild) {
-        container.removeChild(container.firstChild);
-    }
-    container.appendChild(fragment);
-}
-const exprMarker$1 = '{{}}';
-class TemplatePart$1 {
-    constructor(type, index, name, rawName, strings) {
-        this.type = type;
-        this.index = index;
-        this.name = name;
-        this.rawName = rawName;
-        this.strings = strings;
-    }
-}
-class Template$1 {
-    constructor(strings) {
-        this.parts = [];
-        this._strings = strings;
-        this._parse();
-    }
-    _parse() {
-        this.element = document.createElement('template');
-        this.element.innerHTML = this._getTemplateHtml(this._strings);
-        const walker = document.createTreeWalker(this.element.content, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
-        let index = -1;
-        let partIndex = 0;
-        const nodesToRemove = [];
-        const attributesToRemove = [];
-        while (walker.nextNode()) {
-            index++;
-            const node = walker.currentNode;
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                const attributes = node.attributes;
-                for (let i = 0; i < attributes.length; i++) {
-                    const attribute = attributes.item(i);
-                    const value = attribute.value;
-                    const strings = value.split(exprMarker$1);
-                    if (strings.length > 1) {
-                        const attributeString = this._strings[partIndex];
-                        const rawNameString = attributeString.substring(0, attributeString.length - strings[0].length);
-                        const match = rawNameString.match(/((?:\w|[.\-_$])+)=["']?$/);
-                        const rawName = match[1];
-                        this.parts.push(new TemplatePart$1('attribute', index, attribute.name, rawName, strings));
-                        attributesToRemove.push(attribute);
-                        partIndex += strings.length - 1;
-                    }
-                }
-            } else if (node.nodeType === Node.TEXT_NODE) {
-                const strings = node.nodeValue.split(exprMarker$1);
-                if (strings.length > 1) {
-                    partIndex += strings.length - 1;
-                    for (let i = 0; i < strings.length; i++) {
-                        const string = strings[i];
-                        const literalNode = new Text(string);
-                        node.parentNode.insertBefore(literalNode, node);
-                        index++;
-                        if (i < strings.length - 1) {
-                            node.parentNode.insertBefore(new Text(), node);
-                            node.parentNode.insertBefore(new Text(), node);
-                            this.parts.push(new TemplatePart$1('node', index));
-                            index += 2;
-                        }
-                    }
-                    index--;
-                    nodesToRemove.push(node);
-                } else if (!node.nodeValue.trim()) {
-                    nodesToRemove.push(node);
-                    index--;
-                }
-            }
-        }
-        for (const n of nodesToRemove) {
-            n.parentNode.removeChild(n);
-        }
-        for (const a of attributesToRemove) {
-            a.ownerElement.removeAttribute(a.name);
-        }
-    }
-    _getTemplateHtml(strings) {
-        const parts = [];
-        for (let i = 0; i < strings.length; i++) {
-            parts.push(strings[i]);
-            if (i < strings.length - 1) {
-                parts.push(exprMarker$1);
-            }
-        }
-        return parts.join('');
-    }
-}
-class Part$1 {
-    constructor(instance) {
-        this.instance = instance;
-    }
-    _getValue(value) {
-        if (typeof value === 'function') {
-            try {
-                value = value(this);
-            } catch (e) {
-                console.error(e);
-                return;
-            }
-        }
-        if (value === null) {
-            return undefined;
-        }
-        return value;
-    }
-}
-class AttributePart$1 extends Part$1 {
-    constructor(instance, element, name, strings) {
-        super(instance);
-        console.assert(element.nodeType === Node.ELEMENT_NODE);
-        this.element = element;
-        this.name = name;
-        this.strings = strings;
-    }
-    setValue(values) {
-        const strings = this.strings;
-        let text = '';
-        for (let i = 0; i < strings.length; i++) {
-            text += strings[i];
-            if (i < strings.length - 1) {
-                const v = this._getValue(values[i]);
-                if (v && typeof v !== 'string' && v[Symbol.iterator]) {
-                    for (const t of v) {
-                        text += t;
-                    }
-                } else {
-                    text += v;
-                }
-            }
-        }
-        this.element.setAttribute(this.name, text);
-    }
-    get size() {
-        return this.strings.length - 1;
-    }
-}
-class NodePart$1 extends Part$1 {
-    constructor(instance, startNode, endNode) {
-        super(instance);
-        this.startNode = startNode;
-        this.endNode = endNode;
-    }
-    setValue(value) {
-        value = this._getValue(value);
-        if (value instanceof Node) {
-            this._previousValue = this._setNodeValue(value);
-        } else if (value instanceof TemplateResult$1) {
-            this._previousValue = this._setTemplateResultValue(value);
-        } else if (value && value.then !== undefined) {
-            value.then(v => {
-                if (this._previousValue === value) {
-                    this.setValue(v);
-                }
+          if (set[i] && set[i].value !== value) {
+            changes.push({
+              from: {
+                value: set[i].value,
+                position: set[i].position,
+              },
+              to: {
+                value,
+                position
+              }
             });
-            this._previousValue = value;
-        } else if (value && typeof value !== 'string' && value[Symbol.iterator]) {
-            this._previousValue = this._setIterableValue(value);
-        } else if (this.startNode.nextSibling === this.endNode.previousSibling && this.startNode.nextSibling.nodeType === Node.TEXT_NODE) {
-            this.startNode.nextSibling.textContent = value;
-            this._previousValue = value;
-        } else {
-            this._previousValue = this._setTextValue(value);
-        }
-    }
-    _insertNodeBeforeEndNode(node) {
-        this.endNode.parentNode.insertBefore(node, this.endNode);
-    }
-    _setNodeValue(value) {
-        this.clear();
-        this._insertNodeBeforeEndNode(value);
-        return value;
-    }
-    _setTextValue(value) {
-        return this._setNodeValue(new Text(value));
-    }
-    _setTemplateResultValue(value) {
-        let instance;
-        if (this._previousValue && this._previousValue._template === value.template) {
-            instance = this._previousValue;
-        } else {
-            instance = this.instance._createInstance(value.template);
-            this._setNodeValue(instance._clone());
-        }
-        instance.update(value.values);
-        return instance;
-    }
-    _setIterableValue(value) {
-        let itemStart = this.startNode;
-        let itemEnd;
-        const values = value[Symbol.iterator]();
-        const previousParts = Array.isArray(this._previousValue) ? this._previousValue : undefined;
-        let previousPartsIndex = 0;
-        const itemParts = [];
-        let current = values.next();
-        let next = values.next();
-        if (current.done) {
-            this.clear();
-        }
-        while (!current.done) {
-            let itemPart;
-            if (previousParts !== undefined && previousPartsIndex < previousParts.length) {
-                itemPart = previousParts[previousPartsIndex++];
-                if (next.done && itemPart.endNode !== this.endNode) {
-                    this.clear(itemPart.endNode.previousSibling);
-                    itemPart.endNode = this.endNode;
-                }
-                itemEnd = itemPart.endNode;
-            } else {
-                if (next.done) {
-                    itemEnd = this.endNode;
-                } else {
-                    itemEnd = new Text();
-                    this._insertNodeBeforeEndNode(itemEnd);
-                }
-                itemPart = new NodePart$1(this.instance, itemStart, itemEnd);
-            }
-            itemPart.setValue(current.value);
-            itemParts.push(itemPart);
-            current = next;
-            next = values.next();
-            itemStart = itemEnd;
-        }
-        return itemParts;
-    }
-    clear(startNode = this.startNode) {
-        this._previousValue = undefined;
-        let node = startNode.nextSibling;
-        while (node !== null && node !== this.endNode) {
-            let next = node.nextSibling;
-            node.parentNode.removeChild(node);
-            node = next;
-        }
-    }
-}
-class TemplateInstance$1 {
-    constructor(template) {
-        this._parts = [];
-        this._template = template;
-    }
-    get template() {
-        return this._template;
-    }
-    update(values) {
-        let valueIndex = 0;
-        for (const part of this._parts) {
-            if (part.size === undefined) {
-                part.setValue(values[valueIndex++]);
-            } else {
-                part.setValue(values.slice(valueIndex, valueIndex + part.size));
-                valueIndex += part.size;
-            }
-        }
-    }
-    _clone() {
-        const fragment = document.importNode(this._template.element.content, true);
-        if (this._template.parts.length > 0) {
-            const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
-            const parts = this._template.parts;
-            let index = 0;
-            let partIndex = 0;
-            let templatePart = parts[0];
-            let node = walker.nextNode();
-            while (node != null && partIndex < parts.length) {
-                if (index === templatePart.index) {
-                    this._parts.push(this._createPart(templatePart, node));
-                    templatePart = parts[++partIndex];
-                } else {
-                    index++;
-                    node = walker.nextNode();
-                }
-            }
-        }
-        return fragment;
-    }
-    _createPart(templatePart, node) {
-        if (templatePart.type === 'attribute') {
-            return new AttributePart$1(this, node, templatePart.name, templatePart.strings);
-        } else if (templatePart.type === 'node') {
-            return new NodePart$1(this, node, node.nextSibling);
-        } else {
-            throw new Error(`unknown part type: ${templatePart.type}`);
-        }
-    }
-    _createInstance(template) {
-        return new TemplateInstance$1(template);
-    }
-}
-window.html = window.html || html$2;
-window.Backed = window.Backed || {};
-window.Backed.Renderer = window.Backed.Renderer || render$2;
-var litMixin$2 = base => {
-    return class LitMixin extends base {
-        get propertyStore() {
-            return window.Backed.PropertyStore;
-        }
-        constructor(options = {}) {
-            super(options);
-            this.attachShadow({ mode: 'open' });
-            if (!this._isValidRenderer(this.render)) throw 'Invalid renderer!';
-            if (this.render) render$2(this.render(), this.shadowRoot);else throw 'Missing render method!';
-        }
-        _isValidRenderer(renderer) {
-            if (!renderer) {
-                return;
-            }
-            return String(renderer).includes('return html`');
-        }
-    };
-};
+            set[i].value = value;
+            set[i].position = [start, end];
+          } else if (!set[i]) {
+            set.push({value, position: [start, end]});
+            changes.push({
+              from: {
+                value: null,
+                position
+              },
+              to: {
+                value,
+                position
+              }
+            });
+          }
+          template += `${value}${string}`;
+        });
+      } else {
+        template += strings[0];
+      }
+      return {
+        template,
+        changes
+      };
+    });
+  };
 
-window.Backed = window.Backed || {};
-window.Backed.PropertyStore = window.Backed.PropertyStore || new Map();
-const render$3 = window.Backed.Renderer;
-var propertyMixin$2 = base => {
-  return class PropertyMixin extends base {
-    constructor(options = {}) {
-      super(options);
-      this.properties = options.properties;
+  window.html = window.html || html$1;
+
+  var RenderMixin = (base = HTMLElement) =>
+  class RenderMixin extends base {
+
+    constructor() {
+      super();
+        // check template for slotted and set shadowRoot if not set already
+      if (this.template && this.shouldAttachShadow() && !this.shadowRoot)
+        this.attachShadow({mode: 'open'});
+
+      this.renderer = this.renderer.bind(this);
+      this.render = this.renderer;
     }
+
+    renderer(properties = this.properties, template = this.template) {
+      if (!properties) properties = {};
+      else if (!this.isFlat(properties)) {
+        // check if we are dealing with an flat or indexed object
+        // create flat object getting the values from super if there is one
+        // default to given properties set properties[key].value
+        // this implementation is meant to work with 'property-mixin'
+        // checkout https://github.com/vandeurenglenn/backed/src/mixin/property-mixin
+        // while I did not test, I believe it should be compatible with PolymerElements
+        const object = {};
+        // try getting value from this.property
+        // try getting value from properties.property.value
+        // try getting value from property.property
+        // fallback to property
+        Object.keys(properties).forEach(key =>
+          object[key] = this[key] || properties[key].value || properties[key] || key
+        );
+        properties = object;
+      }
+      render(this, template, properties);
+    }
+
+    /**
+     * wether or not the template contains slot tags
+     */
+    shouldAttachShadow() {
+      if (this.shadowRoot) return false;
+      else return Boolean(String(this.template().template).match(/<slot>(.*)<\/slot>/));
+    }
+
+    /**
+     * wether or not properties is just an object or indexed object (like {prop: {value: 'value'}})
+     */
+    isFlat(object) {
+      const firstObject = object[Object.keys(object)[0]];
+      if (firstObject && firstObject.hasOwnProperty('value')) return false;
+      else return true;
+    }
+
     connectedCallback() {
-      if (this.properties) {
-        for (const entry of Object.entries(this.properties)) {
-          const { observer, reflect, renderer } = entry[1];
-          if (observer || reflect || renderer) {
-            if (renderer && !render$3) {
-              console.warn('Renderer undefined');
-            }
+      if (super.connectedCallback) super.connectedCallback();
+
+      if (this.render) {
+        this.render();
+        this.rendered = true;
+      }  }
+  }
+
+  window.Backed = window.Backed || {};
+  // binding does it's magic using the propertyStore ...
+  window.Backed.PropertyStore = window.Backed.PropertyStore || new Map();
+
+  // TODO: Create & add global observer
+  var PropertyMixin = base => {
+    return class PropertyMixin extends base {
+      static get observedAttributes() {
+        return Object.entries(this.properties).map(entry => {if (entry[1].reflect) {return entry[0]} else return null});
+      }
+
+      get properties() {
+        return customElements.get(this.localName).properties;
+      }
+
+      constructor() {
+        super();
+        if (this.properties) {
+          for (const entry of Object.entries(this.properties)) {
+            const { observer, reflect, renderer } = entry[1];
+            // allways define property even when renderer is not found.
             this.defineProperty(entry[0], entry[1]);
           }
         }
       }
-    }
-    defineProperty(property = null, { strict = false, observer, reflect = false, renderer, value }) {
-      Object.defineProperty(this, property, {
-        set(value) {
-          if (value === this[`___${property}`]) return;
-          this[`___${property}`] = value;
-          if (reflect) {
-            if (value) this.setAttributte(property, String(value));else this.removeAttribute(property);
-          }
-          if (observer) {
-            if (observer in this) this[observer]();else console.warn(`observer::${observer} undefined`);
-          }
-          if (renderer) {
-            if (renderer in this) render$3(this[renderer](), this.shadowRoot);else console.warn(`renderer::${renderer} undefined`);
-          }
-        },
-        get() {
-          return this[`___${property}`];
-        },
-        configurable: strict ? false : true
-      });
-      const attr = this.getAttribute(property);
-      this[property] = attr || this.hasAttribute(property) || value;
-    }
-  };
-};
 
-class CustomAppLayout extends litMixin$2(propertyMixin$2(HTMLElement)) {
-  constructor(options = { properties: {} }) {
-    const properties = {
-      firstRender: { value: true, renderer: 'render' },
-      headerMarginTop: { value: '', renderer: 'render' },
-      headerPaddingTop: { value: '', renderer: 'render' }
-    };
-    Object.assign(options.properties, properties);
-    super(options);
+      connectedCallback() {
+        if (super.connectedCallback) super.connectedCallback();
+        if (this.attributes)
+          for (const attribute of this.attributes) {
+            if (String(attribute.name).includes('on-')) {
+              const fn = attribute.value;
+              const name = attribute.name.replace('on-', '');
+              this.addEventListener(String(name), event => {
+                let target = event.path[0];
+                while (!target.host) {
+                  target = target.parentNode;
+                }
+                if (target.host[fn]) {
+                  target.host[fn](event);
+                }
+              });
+            }
+        }
+      }
+
+      attributeChangedCallback(name, oldValue, newValue) {
+        this[name] = newValue;
+      }
+
+      /**
+       * @param {function} options.observer callback function returns {instance, property, value}
+       * @param {boolean} options.reflect when true, reflects value to attribute
+       * @param {function} options.render callback function for renderer (example: usage with lit-html, {render: render(html, shadowRoot)})
+       */
+      defineProperty(property = null, {strict = false, observer, reflect = false, renderer, value}) {
+        Object.defineProperty(this, property, {
+          set(value) {
+            if (value === this[`___${property}`]) return;
+            this[`___${property}`] = value;
+
+            if (reflect) {
+              if (value) this.setAttribute(property, String(value));
+              else this.removeAttribute(property);
+            }
+
+            if (observer) {
+              if (observer in this) this[observer]();
+              else console.warn(`observer::${observer} undefined`);
+            }
+
+            if (renderer) {
+              const obj = {};
+              obj[property] = value;
+              if (renderer in this) this.render(obj, this[renderer]);
+              else console.warn(`renderer::${renderer} undefined`);
+            }
+
+          },
+          get() {
+            return this[`___${property}`];
+          },
+          configurable: strict ? false : true
+        });
+        // check if attribute is defined and update property with it's value
+        // else fallback to it's default value (if any)
+        const attr = this.getAttribute(property);
+        this[property] = attr || this.hasAttribute(property) || value;
+      }
+    }
   }
-  slotted(slot) {
-    slot = slot.assignedNodes();
-    if (slot[0].localName === 'slot') {
-      return this.slotted(slot[0]);
-    } else {
-      for (const node of slot) {
-        if (node.nodeType === 1) {
-          return node;
+
+  /**
+   * @mixin Backed
+   * @module utils
+   * @export loadScript
+   *
+   * defer handles loading after the document is parsed, async loads while parsing
+   *
+   * @param {string} src link/path to the script to load
+   * @param {string} method default: 'async',  options: `defer, async, ''`
+   * @param {string} type default: undefined,  options: `module, utf-8, ...`
+   * @return {object} merge result
+   */
+   var loadScript = (src, method = 'async', type) => {
+     return new Promise((resolve, reject) => {
+       let script = document.createElement('script');
+       script.setAttribute(method, '');
+       if (type) script.setAttribute('type', type);
+       script.onload = result => {
+         resolve(result);
+       };
+       script.onerror = error => {
+         reject(error);
+       };
+       script.src = src;
+       document.body.appendChild(script);
+     });
+   }
+
+  /**
+   * Add space between camelCase text.
+   */
+  var unCamelCase = (string) => {
+    string = string.replace(/([a-z\xE0-\xFF])([A-Z\xC0\xDF])/g, '$1 $2');
+    string = string.toLowerCase();
+    return string;
+  };
+
+  /**
+  * Replaces all accented chars with regular ones
+  */
+  var replaceAccents = (string) => {
+    // verifies if the String has accents and replace them
+    if (string.search(/[\xC0-\xFF]/g) > -1) {
+        string = string
+                .replace(/[\xC0-\xC5]/g, 'A')
+                .replace(/[\xC6]/g, 'AE')
+                .replace(/[\xC7]/g, 'C')
+                .replace(/[\xC8-\xCB]/g, 'E')
+                .replace(/[\xCC-\xCF]/g, 'I')
+                .replace(/[\xD0]/g, 'D')
+                .replace(/[\xD1]/g, 'N')
+                .replace(/[\xD2-\xD6\xD8]/g, 'O')
+                .replace(/[\xD9-\xDC]/g, 'U')
+                .replace(/[\xDD]/g, 'Y')
+                .replace(/[\xDE]/g, 'P')
+                .replace(/[\xE0-\xE5]/g, 'a')
+                .replace(/[\xE6]/g, 'ae')
+                .replace(/[\xE7]/g, 'c')
+                .replace(/[\xE8-\xEB]/g, 'e')
+                .replace(/[\xEC-\xEF]/g, 'i')
+                .replace(/[\xF1]/g, 'n')
+                .replace(/[\xF2-\xF6\xF8]/g, 'o')
+                .replace(/[\xF9-\xFC]/g, 'u')
+                .replace(/[\xFE]/g, 'p')
+                .replace(/[\xFD\xFF]/g, 'y');
+    }
+
+    return string;
+  };
+
+  var removeNonWord = (string) => string.replace(/[^0-9a-zA-Z\xC0-\xFF \-]/g, '');
+
+  const WHITE_SPACES = [
+      ' ', '\n', '\r', '\t', '\f', '\v', '\u00A0', '\u1680', '\u180E',
+      '\u2000', '\u2001', '\u2002', '\u2003', '\u2004', '\u2005', '\u2006',
+      '\u2007', '\u2008', '\u2009', '\u200A', '\u2028', '\u2029', '\u202F',
+      '\u205F', '\u3000'
+  ];
+
+  /**
+  * Remove chars from beginning of string.
+  */
+  var ltrim = (string, chars) => {
+    chars = chars || WHITE_SPACES;
+
+    let start = 0,
+        len = string.length,
+        charLen = chars.length,
+        found = true,
+        i, c;
+
+    while (found && start < len) {
+        found = false;
+        i = -1;
+        c = string.charAt(start);
+
+        while (++i < charLen) {
+            if (c === chars[i]) {
+                found = true;
+                start++;
+                break;
+            }
+        }
+    }
+
+    return (start >= len) ? '' : string.substr(start, len);
+  };
+
+  /**
+  * Remove chars from end of string.
+  */
+  var rtrim = (string, chars) => {
+    chars = chars || WHITE_SPACES;
+
+    var end = string.length - 1,
+        charLen = chars.length,
+        found = true,
+        i, c;
+
+    while (found && end >= 0) {
+        found = false;
+        i = -1;
+        c = string.charAt(end);
+
+        while (++i < charLen) {
+            if (c === chars[i]) {
+                found = true;
+                end--;
+                break;
+            }
+        }
+    }
+
+    return (end >= 0) ? string.substring(0, end + 1) : '';
+  }
+
+  /**
+   * Remove white-spaces from beginning and end of string.
+   */
+  var trim = (string, chars) => {
+    chars = chars || WHITE_SPACES;
+    return ltrim(rtrim(string, chars), chars);
+  }
+
+  /**
+   * Convert to lower case, remove accents, remove non-word chars and
+   * replace spaces with the specified delimeter.
+   * Does not split camelCase text.
+   */
+  var slugify = (string, delimeter) => {
+    if (delimeter == null) {
+        delimeter = "-";
+    }
+
+    string = replaceAccents(string);
+    string = removeNonWord(string);
+    string = trim(string) //should come after removeNonWord
+            .replace(/ +/g, delimeter) //replace spaces with delimeter
+            .toLowerCase();
+    return string;
+  };
+
+  /**
+  * Replaces spaces with hyphens, split camelCase text, remove non-word chars, remove accents and convert to lower case.
+  */
+  var hyphenate = string => {
+    string = unCamelCase(string);
+    return slugify(string, "-");
+  }
+
+  const shouldRegister = name => {
+    return customElements.get(name) ? false : true;
+  };
+
+  var define = klass => {
+    const name = hyphenate(klass.name);
+    return shouldRegister(name) ? customElements.define(name, klass) : '';
+  }
+
+  /**
+   * @mixin Backed
+   * @module utils
+   * @export merge
+   *
+   * some-prop -> someProp
+   *
+   * @param {object} object The object to merge with
+   * @param {object} source The object to merge
+   * @return {object} merge result
+   */
+  var merge = (object = {}, source = {}) => {
+    // deep assign
+    for (const key of Object.keys(object)) {
+      if (source[key]) {
+        Object.assign(object[key], source[key]);
+      }
+    }
+    // assign the rest
+    for (const key of Object.keys(source)) {
+      if (!object[key]) {
+        object[key] = source[key];
+      }
+    }
+    return object;
+  }
+
+  var CustomEffects = base => class CustomEffects extends base {
+    get effects() {
+      return customElements.get(this.localName).effects;
+    }
+    constructor() {
+      super();
+    }
+
+    connectedCallback() {
+      if (super.connectedCallback) super.connectedCallback();
+      if (this.effects) {
+        for (const effect of this.effects) {
+          this._initEffect(effect);
         }
       }
     }
-    return slot;
+
+    _initEffect(effect) {
+      if (typeof effect === 'string') {
+        effect = [effect, effect === 'resize' || effect === 'scroll' ? window : this];
+      }    return new Promise((resolve, reject) => {
+        effect[1].addEventListener(effect[0], event => {
+          const func = effect[0].slice(0, 1).toUpperCase() + effect[0].slice(1);
+          if (this[`on${func}`]) {
+            this[`on${func}`](event);
+          } else {
+            console.warn(`on${func} method missing`);
+          }
+        });
+      });
+    }
   }
-  get content() {
-    return this.slotted(this.shadowRoot.querySelector('slot[name="content"]'));
-  }
-  get header() {
-    return this.slotted(this.shadowRoot.querySelector('slot[name="header"]'));
-  }
-  get container() {
-    return this.shadowRoot.querySelector('.content-container');
-  }
-  render() {
-    if (this.firstRender === false) {
-      const header = this.header;
-      const headerHeight = header.offsetHeight;
-      if (header.hasAttribute('fixed') && !header.hasAttribute('condenses')) {
+
+  /**
+   * @example
+   * <custom-app-layout>
+   *   <header slot="header" fixed></header>
+   *   <section slot="content"></section> // appears under the header
+   * </custom-app-layout>
+   * @extends RenderMixin, PropertyMixin, HTMLElement
+   */
+  define(class CustomAppLayout extends RenderMixin(PropertyMixin(CustomEffects(HTMLElement))) {
+    /**
+     * @return {object}
+     */
+    static get properties() {
+      return merge(super.properties, {});
+    }
+
+    /**
+     * @return {array} [effects]
+     */
+    static get effects() {
+      return ['resize'];
+    }
+
+    /**
+     * calls super
+     */
+    constructor() {
+      super();
+      this.attachShadow({mode: 'open'});
+    }
+
+    connectedCallback() {
+      super.connectedCallback();
+      this.onResize();
+    }
+
+    // iterate trough slots untill no slot is found
+    slotted(slot) {
+      slot = slot.assignedNodes();
+      if (slot[0] && slot[0].localName === 'slot') {
+        return this.slotted(slot[0]);
+      } else {
+        for (const node of slot) {
+          if (node.nodeType === 1) {
+            this.__nodeList.push(node);
+          }
+        }
+        if (this.__nodeList.length !== 0) return this.__nodeList;
+      }
+      return [slot];
+    }
+
+    get headers() {
+      this.__nodeList = [];
+      return this.slotted(this.shadowRoot.querySelector('slot[name="header"]'));
+    }
+
+    get container() {
+      return this.shadowRoot.querySelector('.content-container');
+    }
+
+    onResize() {
+      const headers = this.headers;
+      let offsetHeight = 0;
+      if (headers.length !== 0) {
+        for (const header of headers) {
+          offsetHeight += header.offsetHeight;
+        }
+      } else {
+        offsetHeight = headers[0].offsetHeight;
+      }
+      if (headers[0].hasAttribute('fixed') && !headers[0].hasAttribute('condenses')) {
+        // If the header size does not change and we're using a scrolling region, exclude
+        // the header area from the scrolling region so that the header doesn't overlap
+        // the scrollbar.
         requestAnimationFrame(() => {
-          this.headerMarginTop = headerHeight + 'px';
-          this.headerPaddingTop = '';
+          this.contentContainer.style.marginTop = offsetHeight + 'px';
+          this.contentContainer.style.paddingTop = '';
         });
       } else {
         requestAnimationFrame(() => {
-          this.headerPaddingTop = headerHeight + 'px';
-          this.headerMarginTop = '';
+          this.contentContainer.style.marginTop = '';
+          this.contentContainer.style.paddingTop = offsetHeight + 'px';
         });
       }
-    } else {
-      this.firstRender = false;
     }
-    return html`
+
+    get contentContainer() {
+      return this.shadowRoot.querySelector('.content-container')
+    }
+
+    get template() {
+      return html`
       <style>
         :host {
           display: block;
@@ -599,7 +618,7 @@ class CustomAppLayout extends litMixin$2(propertyMixin$2(HTMLElement)) {
           right: 0;
           bottom: 0;
         }
-        ::slotted([slot="header"]) {
+        :host:not([fixed]) ::slotted([slot="header"]) {
           position: absolute;
           top: 0;
           left: 0;
@@ -620,21 +639,20 @@ class CustomAppLayout extends litMixin$2(propertyMixin$2(HTMLElement)) {
         }
       </style>
       <slot name="header"></slot>
-      <span class="content-container" style="margin-top: ${this.headerMarginTop}; padding-top: ${this.headerPaddingTop};">
+      <span class="content-container">
         <slot name="content"></slot>
       </span>
     `;
-  }
-}
-customElements.define('custom-app-layout', CustomAppLayout);
-
-(() => {
-  class CustomHeader extends litMixin$1(HTMLElement) {
-    constructor() {
-      super();
     }
-    render() {
-      return html`
+  });
+
+  (() => {
+    class CustomHeader extends RenderMixin(HTMLElement) {
+      constructor() {
+        super();
+      }
+      get template() {
+        return html`
         <style>
           :host {
             display: block;
@@ -647,134 +665,136 @@ customElements.define('custom-app-layout', CustomAppLayout);
         <slot></slot>
         <slot name="toolbar"></slot>
       `;
-    }
-  }
-  customElements.define('custom-header', CustomHeader);
-})();
+      }
+    }  customElements.define('custom-header', CustomHeader);
+  })();
 
-var CustomSelectMixin = (base => {
-  return class CustomSelectMixin extends propertyMixin$2(base) {
-    static get observedAttributes() {
-      return ['selected'];
-    }
-    constructor(options = {}) {
-      const properties = {
-        selected: {
-          value: 0,
-          observer: '__selectedObserver__'
+  var SelectMixin = base => {
+    return class SelectMixin extends PropertyMixin(base) {
+
+      static get properties() {
+        return merge(super.properties, {
+          selected: {
+            value: 0,
+            observer: '__selectedObserver__'
+          }
+        });
+      }
+
+      constructor() {
+        super();
+      }
+
+      get slotted() {
+        return this.shadowRoot ? this.shadowRoot.querySelector('slot') : this;
+      }
+
+      get _assignedNodes() {
+        return 'assignedNodes' in this.slotted ? this.slotted.assignedNodes() : this.children;
+      }
+
+      /**
+      * @return {String}
+      */
+      get attrForSelected() {
+        return this.getAttribute('attr-for-selected') || 'name';
+      }
+
+      set attrForSelected(value) {
+        this.setAttribute('attr-for-selected', value);
+      }
+
+      attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+          // check if value is number
+          if (!isNaN(newValue)) {
+            newValue = Number(newValue);
+          }
+          this[name] = newValue;
         }
-      };
-      if (options.properties) Object.assign(options.properties, properties);else options.properties = properties;
-      super(options);
-    }
-    get root() {
-      return this.shadowRoot || this;
-    }
-    get slotted() {
-      return this.shadowRoot ? this.shadowRoot.querySelector('slot') : this;
-    }
-    get _assignedNodes() {
-      return 'assignedNodes' in this.slotted ? this.slotted.assignedNodes() : this.children;
-    }
-    get attrForSelected() {
-      return this.getAttribute('attr-for-selected') || 'name';
-    }
-    set attrForSelected(value) {
-      this.setAttribute('attr-for-selected', value);
-    }
-    connectedCallback() {
-      super.connectedCallback();
-      this.slotchange = this.slotchange.bind(this);
-      this.slotted.addEventListener('slotchange', this.slotchange);
-    }
-    slotchange() {
-      if (this.selected) {
-        this.__selectedObserver__({ value: this.selected });
       }
-    }
-    attributeChangedCallback(name, oldValue, newValue) {
-      if (oldValue !== newValue) {
-        if (!isNaN(newValue)) {
-          newValue = Number(newValue);
+
+      /**
+       * @param {string|number|HTMLElement} selected
+       */
+      select(selected) {
+        this.selected = selected;
+      }
+
+      next(string) {
+        const index = this.getIndexFor(this.currentSelected);
+        if (index !== -1 && index >= 0 && this._assignedNodes.length > index &&
+            (index + 1) <= this._assignedNodes.length - 1) {
+          this.selected = this._assignedNodes[index + 1];
         }
-        this[name] = newValue;
       }
-    }
-    select(selected) {
-      this.selected = selected;
-    }
-    next(string) {
-      const index = this._assignedNodes.indexOf(this.currentSelected);
-      if (index !== -1 && index >= 0 && this._assignedNodes.length > index && index + 1 <= this._assignedNodes.length - 1) {
-        this.selected = this._assignedNodes[index + 1];
+
+      previous() {
+        const index = this.getIndexFor(this.currentSelected);
+        if (index !== -1 && index >= 0 && this._assignedNodes.length > index &&
+            (index - 1) >= 0) {
+          this.selected = this._assignedNodes[index - 1];
+        }
       }
-    }
-    previous() {
-      const index = this._assignedNodes.indexOf(this.currentSelected);
-      if (index !== -1 && index >= 0 && this._assignedNodes.length > index && index - 1 >= 0) {
-        this.selected = this._assignedNodes[index - 1];
+
+      getIndexFor(element) {
+        if (element && element instanceof HTMLElement === false)
+          return console.error(`${element} is not an instanceof HTMLElement`);
+
+        return this._assignedNodes.indexOf(element || this.selected);
       }
-    }
-    _updateSelected(selected) {
-      selected.classList.add('custom-selected');
-      if (this.currentSelected && this.currentSelected !== selected) {
-        this.currentSelected.classList.remove('custom-selected');
+
+      _updateSelected(selected) {
+        selected.classList.add('custom-selected');
+        if (this.currentSelected && this.currentSelected !== selected) {
+          this.currentSelected.classList.remove('custom-selected');
+        }
+        this.currentSelected = selected;
       }
-      this.currentSelected = selected;
-    }
-    __selectedObserver__(value) {
-      console.log(this.selected);
-      switch (typeof this.selected) {
-        case 'object':
-          this._updateSelected(this.selected);
-          break;
-        case 'string':
-          for (const child of this._assignedNodes) {
-            if (child.nodeType === 1) {
-              if (child.getAttribute(this.attrForSelected) === this.selected) {
-                return this._updateSelected(child);
+
+      /**
+       * @param {string|number|HTMLElement} change.value
+       */
+      __selectedObserver__(value) {
+        switch (typeof this.selected) {
+          case 'object':
+            this._updateSelected(this.selected);
+            break;
+          case 'string':
+            for (const child of this._assignedNodes) {
+              if (child.nodeType === 1) {
+                if (child.getAttribute(this.attrForSelected) === this.selected) {
+                  return this._updateSelected(child);
+                }
               }
             }
-          }
-          if (this.currentSelected) {
-            this.currentSelected.classList.remove('custom-selected');
-          }
-          break;
-        default:
-          const child = this._assignedNodes[this.selected];
-          if (child && child.nodeType === 1) {
-            this._updateSelected(child);
-          } else if (this.currentSelected) {
-            this.currentSelected.classList.remove('custom-selected');
-          }
-      }
-    }
-  };
-});
-
-class CustomPages extends litMixin$2(CustomSelectMixin(HTMLElement)) {
-  constructor() {
-    super();
-  }
-  isEvenNumber(number) {
-    return Boolean(number % 2 === 0);
-  }
-  slotchange() {
-    super.slotchange();
-    let call = 0;
-    for (const child of this.slotted.assignedNodes()) {
-      if (child && child.nodeType === 1) {
-        child.style.zIndex = 99 - call;
-        if (this.isEvenNumber(call++)) {
-          child.classList.add('animate-down');
-        } else {
-          child.classList.add('animate-up');
+            if (this.currentSelected) {
+              this.currentSelected.classList.remove('custom-selected');
+            }
+            break;
+          default:
+            // set selected by index
+            const child = this._assignedNodes[this.selected];
+            if (child && child.nodeType === 1) {
+              this._updateSelected(child);
+            // remove selected even when nothing found, better to return nothing
+            } else if (this.currentSelected) {
+              this.currentSelected.classList.remove('custom-selected');
+            }
         }
       }
     }
   }
-  render() {
-    return html`
+
+  /**
+   * @extends HTMLElement
+   */
+  class CustomPages extends SelectMixin(HTMLElement) {
+    constructor() {
+      super();
+      this.slotchange = this.slotchange.bind(this);
+      this.attachShadow({mode: 'open'});
+      this.shadowRoot.innerHTML = `
       <style>
         :host {
           flex: 1;
@@ -815,16 +835,43 @@ class CustomPages extends litMixin$2(CustomSelectMixin(HTMLElement)) {
         <slot></slot>
       </div>
     `;
-  }
-}
-customElements.define('custom-pages', CustomPages);
+    }
 
-customElements.define('home-view', class HomeView extends litMixin$1(HTMLElement) {
-  constructor() {
-    super();
-  }
-  render() {
-    return html`
+    connectedCallback() {
+      super.connectedCallback();
+      this.shadowRoot.querySelector('slot').addEventListener('slotchange', this.slotchange);
+    }
+
+    isEvenNumber(number) {
+      return Boolean(number % 2 === 0)
+    }
+
+    /**
+     * set animation class when slot changes
+     */
+    slotchange() {
+      let call = 0;
+      for (const child of this.slotted.assignedNodes()) {
+        if (child && child.nodeType === 1) {
+          child.style.zIndex = 99 - call;
+          if (this.isEvenNumber(call++)) {
+            child.classList.add('animate-down');
+          } else {
+            child.classList.add('animate-up');
+          }
+          this.dispatchEvent(new CustomEvent('child-change', {detail: child}));
+        }
+      }
+    }
+  }customElements.define('custom-pages', CustomPages);
+
+  customElements.define('home-view', class HomeView extends RenderMixin(HTMLElement) {
+    constructor() {
+      super();
+      this.attachShadow({mode: 'open'});
+    }
+    get template() {
+      return html`
       <style>
         :host {
           padding: 10px;
@@ -837,30 +884,44 @@ customElements.define('home-view', class HomeView extends litMixin$1(HTMLElement
         }
       </style>
       <h1>Welcome</h1>
+
       <summary>
         Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
       </summary>
     `;
-  }
-});
+    }
+  });
 
-var awskShell = customElements.define('awsk-shell', class AwskShell extends propertyMixin$1(litMixin$1(HTMLElement)) {
-  get pages() {
-    return this.shadowRoot.querySelector('custom-pages');
-  }
-  constructor() {
-    const properties = {
-      title: {
-        value: 'awsk-app',
-        renderer: 'render'
+  var awskShell = customElements.define('awsk-shell',
+    class AwskShell extends PropertyMixin(RenderMixin(HTMLElement)) {
+
+      static get properties() {
+        return {
+          title: {
+            value: 'awsk-app',
+            observer: 'titleObserver'
+          }
+        }
       }
-    };
-    super({ properties });
-    this._clickHandler = this._clickHandler.bind(this);
-    this.addEventListener('click', this._clickHandler);
-  }
-  render() {
-    return html`
+
+      get pages() {
+        return this.shadowRoot.querySelector('custom-pages');
+      }
+
+      constructor() {
+        super();
+        this.attachShadow({mode: 'open'});
+        this._clickHandler = this._clickHandler.bind(this);
+        this.addEventListener('click', this._clickHandler);
+      }
+
+      titleObserver() {
+        // render everytime title changes
+        // this.render();
+      }
+
+      get template() {
+        return html`
         <style>
           :host {
             display: block;
@@ -903,6 +964,7 @@ var awskShell = customElements.define('awsk-shell', class AwskShell extends prop
             text-transform: uppercase;
             cursor: pointer;
           }
+
           .content {
             display: flex;
             flex-direction: column;
@@ -919,7 +981,7 @@ var awskShell = customElements.define('awsk-shell', class AwskShell extends prop
         </style>
         <custom-app-layout>
           <custom-header slot="header" fixed>
-            <span class="title">${this.title}</span>
+            <span class="title">${'title'}</span>
             <span class="flex"></span>
             <button data-route="home">home</button>
             <button data-route="about">about</button>
@@ -932,15 +994,34 @@ var awskShell = customElements.define('awsk-shell', class AwskShell extends prop
           </span>
         </custom-app-layout>
       `;
-  }
-  _clickHandler({ path }) {
-    if (path[0] && path[0].localName === 'button' && path[0].dataset.route) {
-      this.pages.selected = path[0].dataset.route;
-    }
-  }
-});
+      }
 
-return awskShell;
+      loadView(route) {
+        return new Promise((resolve, reject) => {
+          if (!this.loadedSet) this.loadedSet = {};
+          if (this.loadedSet[route]) return resolve();
+
+          const path = `${esImportsSupported ? 'src/views' : 'dist/views'}`;
+          const type = esImportsSupported ? 'module' : null;
+          loadScript(`${path}/${route}-view.js`, 'defer', type)
+            .then(() => {
+              this.loadedSet[route] = true;
+              resolve();
+            })
+            .catch(e => reject(e));
+        });
+      }
+      _clickHandler({path}) {
+        if (path[0] && path[0].localName === 'button' && path[0].dataset.route) {
+          this.loadView(path[0].dataset.route).then(() => {
+            this.pages.selected = path[0].dataset.route;
+          });
+
+        }
+      }
+    }
+  );
+
+  return awskShell;
 
 }());
-//# sourceMappingURL=awsk-shell.js.map

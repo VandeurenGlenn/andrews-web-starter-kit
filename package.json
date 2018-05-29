@@ -7,30 +7,34 @@
   "license": "MIT",
   "flat": true,
   "scripts": {
-    "deploy": "sh build-scripts/gh-pages.sh"
-  },
-  "backed": {
-    "uglify": true,
-    "bundles": [
-      {
-        "src": "src/awsk-shell.js",
-        "dest": "dist/awsk-shell.js",
-        "moduleName": "AWSK",
-        "format": "iife"
-      }
-    ],
-    "server": {
-      "demo": "./"
-    }
+    "install": "yarn build",
+    "deploy": "sh build-scripts/gh-pages.sh",
+    "build": "rollup -c",
+    "serve": "live-server --port=2020"
   },
   "dependencies": {
-    "backed": "^0.9.0-preview.2",
-    "custom-app-layout": "next",
-    "custom-header": "next",
-    "custom-pages": "next"
+    "custom-app-layout": "^0.10.3",
+    "custom-header": "^0.10.0",
+    "custom-pages": "^0.12.0",
+    "custom-renderer-mixin": "^0.1.10"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.0",
+    "rollup": "^0.59.4"
   },
   "resolutions": {
-    "backed": "0.9.0-preview.3"
-  },
-  "devDependencies": {}
+    "backed": "0.12.2",
+    "kind-of": "6.0.2",
+    "is-number": "4.0.0",
+    "safe-buffer": "5.1.2",
+    "minimist": "1.2.0",
+    "debug": "2.6.9",
+    "ms": "2.0.0",
+    "string-width": "2.1.1",
+    "strip-ansi": "4.0.0",
+    "is-fullwidth-code-point": "2.0.0",
+    "ansi-regex": "3.0.0",
+    "statuses": "1.5.0",
+    "object-assign": "4.1.1"
+  }
 }

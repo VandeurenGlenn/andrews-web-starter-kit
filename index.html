@@ -26,15 +26,18 @@
         margin: 0;
       }
     </style>
+    <script>
+      window.esImportsSupported = false;
+    </script>
     <script type="module">
+      window.esImportsSupported = true;
       import './src/awsk-shell.js';
     </script>
     <!-- support browsers without es6-module support -->
-    <script src="dist/awsk-shell.min.js" nomodule></script>
+    <script src="dist/awsk-shell.js" nomodule></script>
   </head>
   <body>
     <!-- properties can be set using attributes, check the title property in awsk-shell ... -->
     <awsk-shell title="awsk"></awsk-shell>
-  	<script src="/reload/reload.js"></script>
-</body>
+  </body>
 </html>
