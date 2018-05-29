@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+
+    <title>Backed - Demo</title>
+    <meta name="description" content="Backed demo">
+
+    <!-- Mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Chrome / Android -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="black">
+    <link rel="icon" href="icon.png">
+
+    <!-- Safari / iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" href="apple-touch-icon.png">
+    <!-- <link rel="import" href="custom-demo-snippet.html"> -->
+    <script type="module">
+      import './custom-backed-element.js';
+      import './custom-backed-element-2.js';
+      import './next.js';
+    </script>
+
+  </head>
+  <body>
+    <custom-demo-snippet>
+      <custom-backed-element name="element">
+        hello
+        <span slot="foo">foo</span>
+      </custom-backed-element>
+      <custom-backed-element-two></custom-backed-element-two>
+      <next-element>HELLO</next-element>
+      <button type="button" name="remove child">disconnect (removeChild())</button>
+      <button type="button" name="append child">connect (appendChild())</button>
+    </custom-demo-snippet>
+  	<script src="/reload/reload.js"></script>
+</body>
+
+  <script>
+    const now = performance.now();
+    customElements.whenDefined('custom-backed-element').then(() => {
+      console.log(performance.now() - now);
+    })
+    customElements.whenDefined('custom-backed-element-two').then(() => {
+      console.log(performance.now() - now);
+    });
+    var demoSnippets = document.querySelectorAll('custom-demo-snippet');
+    var element = demoSnippets[0].querySelector('custom-backed-element');
+
+    var removeChildButton = demoSnippets[0].querySelector('button[name="remove child"]');
+    var appendChildButton = demoSnippets[0].querySelector('button[name="append child"]');
+    removeChildButton.addEventListener('click', function(event) {
+      demoSnippets[0].removeChild(element);
+    });
+    appendChildButton.addEventListener('click', function() {
+      element = document.createElement('custom-backed-element');
+      demoSnippets[0].appendChild(element);
+    });
+  </script>
+</html>

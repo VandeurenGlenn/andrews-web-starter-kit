@@ -1,0 +1,83 @@
+<link rel="import" href="marked-import.html">
+
+<script>
+  Backed(class CustomMarkedElement extends HTMLElement {
+    static get properties() {
+      /**
+       * The markdown source that should be rendered by this element.
+       */
+      markdown: {
+        observer: 'render',
+        type: String,
+        value: null
+      },
+      /**
+       * Conform to obscure parts of markdown.pl as much as possible. Don't fix any of the original markdown bugs or poor behavior.
+       */
+      pedantic: {
+        observer: 'render',
+        type: Boolean,
+        value: false
+      },
+      /**
+       * Function used to customize a renderer based on the [API specified in the Marked
+       * library](https://github.com/chjj/marked#overriding-renderer-methods).
+       * It takes one argument: a marked renderer object, which is mutated by the function.
+       */
+      renderer: {
+        observer: 'render',
+        type: Function,
+        value: null
+      },
+      /**
+       * Sanitize the output. Ignore any HTML that has been input.
+       */
+      sanitize: {
+        observer: 'render',
+        type: Boolean,
+        value: false
+      },
+      /**
+       * Use "smart" typographic punctuation for things like quotes and dashes.
+       */
+      smartypants: {
+        observer: 'render',
+        type: Boolean,
+        value: false
+      },
+      /**
+       * Callback function invoked by Marked after HTML has been rendered.
+       * It must take two arguments: err and text and must return the resulting text.
+       */
+      callback: {
+        observer: 'render',
+        type: Function,
+        value: null
+      }
+    }
+    static get observers() {
+
+    }
+    constructor() {
+      super();
+    }
+
+    get text() {
+      return this._text || this.getAttribute('text') || '';
+    }
+
+    set text(value) {
+      this._text = value;
+    }
+
+    set _text(value) {
+      marked(value, opts, this.render);
+    }
+
+    render() {
+      if (!this.text) {
+
+      }
+    }
+  })
+</script>

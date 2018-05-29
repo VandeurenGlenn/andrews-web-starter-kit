@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl">
+  <title data-ice="title">API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="https://github.com/vandeurenglenn/backed" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-backed">backed</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-polyloader">polyloader</a></span></span></li>
+<li data-ice="doc"><div data-ice="dirPath" class="nav-dir-path">internals</div><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/internals/pub-sub.js~pubsub.html">pubsub</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-bind">bind</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fireevent">fireevent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-loadScript">loadScript</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-pubsubloader">pubsubloader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-tojsprop">tojsprop</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><div data-ice="index" class="github-markdown"><h1 id="backed-npm-version-npm-image-npm-url-build-status-travis-image-travis-url-dependency-status-daviddm-image-daviddm-url-coverage-percentage-coveralls-image-coveralls-url-">backed <a href="https://npmjs.org/package/backed"><img src="https://badge.fury.io/js/backed.svg" alt="NPM version"></a> <a href="https://travis-ci.org/basicelements/backed"><img src="https://travis-ci.org/basicelements/backed.svg?branch=master" alt="Build Status"></a> <a href="https://david-dm.org/basicelements/backed"><img src="https://david-dm.org/basicelements/backed.svg?theme=shields.io" alt="Dependency Status"></a> <a href="https://coveralls.io/r/basicelements/backed"><img src="https://coveralls.io/repos/basicelements/backed/badge.svg" alt="Coverage percentage"></a></h1>
+<blockquote>
+<p>Small web framework for quick app &amp; component development</p>
+</blockquote>
+<h2 id="features">Features</h2>
+<ul>
+<li>class development without the worry of constructors and calling super</li>
+<li>internal/scoped &amp; global property observers, checkout <a href="README.md#using-observers">using observers</a></li>
+<li>updates property values to attributes &amp; the otherway around, checkout <a href="README.md#using-reflect">using reflect</a></li>
+<li>templating using <a href="https://www.npmjs.com/package/lit-html">lit-html</a>, checkout <a href="README.md#using-render">using render</a></li>
+</ul>
+<h2 id="installation">Installation</h2>
+<pre><code class="lang-sh"><code class="source-code prettyprint">$ bower install --save backed</code>
+</code></pre>
+<pre><code class="lang-sh"><code class="source-code prettyprint">$ npm install --save backed</code>
+</code></pre>
+<h2 id="usage">Usage</h2>
+<h3 id="basic-usage">Basic usage</h3>
+<pre><code class="lang-js"><code class="source-code prettyprint">Backed(class extends HTMLElement {
+  ready() {
+    // ready to go ...
+  }
+});</code>
+</code></pre>
+<h3 id="using-observers">Using observers</h3>
+<pre><code class="lang-js"><code class="source-code prettyprint">Backed(class extends HTMLElement {
+  static get properties() {
+    return {
+      name: {
+        observer: &apos;change&apos;
+      }
+    }
+  }
+  ready() {
+    // ready to go ...
+  }
+  change(change) {
+    console.log(change);
+  }
+});</code>
+</code></pre>
+<h3 id="using-reflect">Using reflect</h3>
+<pre><code class="lang-js"><code class="source-code prettyprint">Backed(class extends HTMLElement {
+  static get properties() {
+    return {
+      name: {
+        reflect: true
+      }
+    }
+  }
+  ready() {
+    // ready to go ...
+  }
+});</code>
+</code></pre>
+<h3 id="using-render">Using render</h3>
+<pre><code class="lang-js"><code class="source-code prettyprint">Backed(class extends HTMLElement {
+  static get properties() {
+    return {
+      name: {
+        render: true,
+        value: &apos;name should go here&apos;
+      },      
+      lastname: {
+        render: true
+        value: &apos;lastname should go here&apos;
+      }
+    }
+  }
+  render() {
+    html`
+      &lt;style&gt;&lt;/style&gt;
+      &lt;h1&gt;${this.name}&lt;/h1&gt;
+      &lt;h2&gt;${this.lastname}&lt;/h2&gt;
+    `
+  }
+});</code>
+</code></pre>
+<h4 id="or">or</h4>
+<p>warning: watch out when using multiple renderers, when doing this the element will have the templateResult of the last render</p>
+<pre><code class="lang-js"><code class="source-code prettyprint">Backed(class extends HTMLElement {
+  static get properties() {
+    return {
+      name: {
+        render: &apos;renderName&apos;
+      }
+    }
+  }
+  renderName() {
+    html`
+      &lt;style&gt;&lt;/style&gt;
+      &lt;h1&gt;${this.name}&lt;/h1&gt;
+    `
+  }
+});</code>
+</code></pre>
+<h2 id="more-info">More info</h2>
+<ul>
+<li><a href="https://github.com/VandeurenGlenn/backed/wiki">wiki</a></li>
+</ul>
+<h2 id="roadmap">Roadmap</h2>
+<ul>
+<li>[x] Support customElementsV1</li>
+<li>[ ] Support commonjs (node)</li>
+<li>[x] Add observer support</li>
+<li>[x] Add global observer support</li>
+</ul>
+<h2 id="todo">TODO</h2>
+<ul>
+<li>[ ] Add strict property support (wip)</li>
+<li>[ ] Handle Commonjs (properties, observers, etc ...)</li>
+<li>[ ] Bind properties &amp; attributes (use pubsub to notify changes)</li>
+<li>[x] Reflect properties &amp; attributes</li>
+<li>[ ] Add demo&apos;s</li>
+<li>[ ] Add documentation</li>
+</ul>
+<h2 id="license">License</h2>
+<p>CC-BY-NC-ND-4.0 &#xA9; <a href="">Glenn Vandeuren</a></p>
+</div>
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.5.2)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

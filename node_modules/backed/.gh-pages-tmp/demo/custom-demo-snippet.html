@@ -1,0 +1,63 @@
+<link rel="import" href="backed.html">
+<script>
+'use strict';
+(function() {
+
+  Backed(class DemoSnippetCode extends HTMLElement {
+    static get is() { return 'demo-snippet-code' }
+
+    static get properties() {
+      return {
+        code: {
+          value: 'code',
+          observer: 'change'
+        }
+      }
+    }
+
+    constructor() {
+      super();
+    }
+
+    /**
+     * @param {object} change
+     * @param {string} change.property
+     * @param {string|object|array|number|boolean} change.value
+     */
+    change(change) {
+      this.innerHTML = change.value;
+    }
+  });
+
+  Backed(class CustomDemoSnippet extends HTMLElement {
+    static get is() { return 'custom-demo-snippet' }
+    constructor() {
+      super();
+      this.root = this.attachShadow({mode: 'open'});
+    }
+    connectedCallback() {
+      this.root.innerHTML =
+        `<slot></slot>\n<demo-snippet-code></demo-snippet-code>`;
+        setTimeout(() => {
+          this._demoSnippetCode.code = marked(`${this.children[0].outerHTML}`);
+        });
+    }
+
+    get _demoSnippetCode() {
+      return this.root.querySelector('demo-snippet-code');
+    }
+
+    /**
+     * @param {object} change
+     * @param {string} change.property
+     * @param {string|object|array|number|boolean} change.value
+     */
+    change(change) {
+      console.log(`change:
+        name: ${change.property}
+        value: ${change.value}`
+      );
+    }
+  });
+}())
+</script>

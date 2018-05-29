@@ -1,0 +1,2213 @@
+[
+  {
+    "__docId__": 0,
+    "kind": "file",
+    "name": "src/backed.js",
+    "content": "'use strict';\r\nimport base from './base.js';\r\nimport renderStatus from './internals/render-status.js';\nimport { html } from './../node_modules/lit-html/lit-html.js';\n\r\nconst ____isWindow____ = () => {\r\n  try {\r\n    return window;\r\n  } catch(e) {\r\n    return false;\r\n  }\r\n};\r\n\r\nconst ____hasWindow____ = ____isWindow____();\nif (____hasWindow____) {\n  window['RenderStatus'] = window['RenderStatus'] || renderStatus;\n  window.html = window.html || html;\n} else {\n  exports['RenderStatus'] = exports['RenderStatus'] || renderStatus;\n  exports.html = exports.html || html;\n}\r\n/**\r\n *\r\n * @module backed\r\n * @param {class} _class\r\n */\r\nexport default _class => {\r\n  const upperToHyphen = string => {\r\n    return string.replace(/([A-Z])/g, \"-$1\").toLowerCase().replace('-', '');\r\n  };\r\n\r\n  let klass;\r\n\r\n  // get the tagName or try to make one with class.name\r\n  let name = _class.is || upperToHyphen(_class.name);\n  let hasRenderer = false;\n  // Setup properties & observers\r\n  if (____hasWindow____) {\n    const observedAttributes = [];\n    for (const property of Object.entries(_class.properties)) {\n      const {reflect, render} = property[1]\n      if (reflect) {\n        observedAttributes.push(property[0]);\n      }\n      if (render) {\n        hasRenderer = true\n      }\n    }\n    klass = class extends _class {\n      static get observedAttributes() {\n        return observedAttributes;\n      }\n      constructor() {\n        super();\n        if (hasRenderer && !this.shadowRoot) {\n          this.attachShadow({mode: 'open'});\n        }\n        base.constructorCallback(this, _class, ____hasWindow____);\n      }\n      connectedCallback() {\n        base.connectedCallback(this, _class);\n      }\n      disconnectedCallback() {\n        if (this.disconnected) this.disconnected();\n      }\n      attributeChangedCallback(name, oldValue, newValue) {\n        this[name] = newValue;\n      }\n    }\n    if (base.shouldRegister(name, klass)) {\n      customElements.define(name, klass);\n    };\n    return window[_class.name] = klass;\n  } else {\n    // TODO: add commonjs support\n    // return exports[_class.name]\n  }\r\n};\r\n\r\nwindow.dispatchEvent(new CustomEvent('backed-ready'));\r\n",
+    "static": true,
+    "longname": "src/backed.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 1,
+    "kind": "function",
+    "name": "____isWindow____",
+    "memberof": "src/backed.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/backed.js~____isWindow____",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/backed.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [],
+    "return": {
+      "types": [
+        "boolean"
+      ]
+    }
+  },
+  {
+    "__docId__": 2,
+    "kind": "variable",
+    "name": "____hasWindow____",
+    "memberof": "src/backed.js",
+    "static": true,
+    "longname": "src/backed.js~____hasWindow____",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/backed.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 14,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 3,
+    "kind": "function",
+    "name": "backed",
+    "memberof": "src/backed.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/backed.js~backed",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/backed.js",
+    "importStyle": "backed",
+    "description": "",
+    "lineNumber": 27,
+    "unknown": [
+      {
+        "tagName": "@module",
+        "tagValue": "backed"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "class"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "_class",
+        "description": ""
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 4,
+    "kind": "file",
+    "name": "src/base.js",
+    "content": "'use strict';\r\nimport fireEvent from './internals/fire-event.js';\r\nimport toJsProp from './internals/to-js-prop.js';\r\nimport loadScript from './internals/load-script.js';\r\nimport PubSubLoader from './internals/pub-sub-loader.js';\nimport { render } from './../node_modules/lit-html/lit-html.js'\r\n\r\nwindow.registeredElements = window.registeredElements || [];\r\n\r\nconst shouldShim = () => {\r\n  return /Edge/.test(navigator.userAgent) || /Firefox/.test(navigator.userAgent);\r\n}\n\nconst isValidRenderer = renderer => {\n  if (!renderer) {\n    return;\n  }\n  return String(renderer).includes('return html`')\n}\r\n\r\nconst handleProperties = (target, properties) => {\r\n  if (properties) {\r\n    for (let entry of Object.entries(properties)) {\r\n      handleProperty(target, entry[0], entry[1]);\n      // TODO: are we ignoring stuff ...?\n      // check if attribute has value else pass default property value\r\n      target[entry[0]] = target.hasAttribute(entry[0]) ? target.getAttribute(entry[0]) : entry[1].value;\r\n    }\r\n  }\r\n}\r\n\r\nconst handleProperty = (obj, property, {observer, strict, global, reflect, render, value }) => {\r\n\r\n  if (Boolean(observer || global) && _needsObserverSetup(obj, property)) {\n    // Ensure we don't do duplicate work\r\n    obj.observedProperties.push(property);\r\n\r\n    // subscribe only when a callback is defined, all other global options are still available ...\r\n    if (global && obj[observer]) {\n      // Warning, global observers don't work the same like bindings, each observer has it's namespace created like global.name,\n      // so whenever another element has an global observer for name, they will subscribe to the same publisher !\n      // TODO: Add local binding & improve global observers\n      // {{name}} for normal bindings & {{global::name}} for global bindings(observers) (like Polymer does)\n      // this means we need to build a system that keeps track of each component it's bindings &\n      // values should be set as property, so we know if a value needs to be set on attribute, rerender template, etc ..\r\n      PubSub.subscribe(`global.${property}`, obj[observer].bind(obj));\r\n    }\r\n    setupObserver(obj, property, observer, {strict, global, reflect, renderer: render})\r\n  } else if (!Boolean(observer || global) && Boolean(reflect || render)) {\n    setupObserver(obj, property, observer, {strict, global, reflect, renderer: render})\n  }\r\n}\r\n\r\nconst _needsObserverSetup = (obj, property) => {\r\n  if (!obj.observedProperties) {\r\n    obj.observedProperties = [];\r\n  }\r\n  if (obj.observedProperties[property]) {\r\n    console.warn(\r\n      'observer::ignoring duplicate property observer ' + property\r\n    );\r\n    return false;\r\n  } else {\r\n    return true;\r\n  }\r\n}\r\n\r\nconst forObservers = (target, observers, isGlobal=false) => {\r\n  for (let observe of observers) {\r\n    let parts = observe.split(/\\(|\\)/g);\r\n    let fn = parts[0];\r\n    parts = parts.slice(1);\r\n    for (let property of parts) {\r\n      if (property.length) {\r\n        handleProperty(target, property, fn, {\r\n          strict: false,\r\n          global: isGlobal\r\n        });\r\n      }\r\n    }\r\n  }\r\n}\r\n\r\n/**\r\n * Runs a method on target whenever given property changes\r\n *\r\n * example:\r\n * change(change) {\r\n *  change.property // name of the property\r\n *  change.value // value of the property\r\n * }\r\n *\r\n * @arg {object} obj target\r\n * @arg {string} property name\r\n * @arg {boolean} strict\r\n * @arg {method} fn The method to run on change\r\n */\r\nconst setupObserver = (obj, property, fn, {strict, global, reflect, renderer}) => {\r\n  Object.defineProperty(obj, property, {\r\n    set(value) {\n      if (value === undefined) {\n        return\n      }\r\n      if (this[`_${property}`] === value) {\r\n        return;\r\n      }\r\n      this[`_${property}`] = value;\r\n      let data = {\r\n        property: property,\r\n        value: value\r\n      };\n      if (reflect) {\n        if (value) this.setAttribute(property, String(value));\n        else this.removeAttribute(property);\n      }\n      if (renderer) {\n        if (typeof renderer === 'boolean') {\n          render(this.render(), this.shadowRoot);\n        } else {\n          // adds support for multiple renderers\n          render(this[renderer](), this.shadowRoot);\n        }\n      }\r\n      if (global) {\r\n        data.instance = this;\r\n        PubSub.publish(`global.${property}`, data);\r\n      } else if(fn) {\r\n        if (this[fn]) {\r\n          this[fn](data);\r\n        } else {\r\n          console.warn(`observer undefined::${fn} is not a function`);\r\n        }\r\n      }\r\n    },\r\n    get() {\r\n      return this[`_${property}`];\r\n    },\r\n    configurable: strict ? false : true\r\n  });\r\n}\r\n\r\n\r\nconst handleObservers = (target, observers=[], globalObservers=[]) => {\r\n  if (!observers && !globalObservers) {\r\n    return;\r\n  }\r\n  forObservers(target, observers);\r\n}\r\n\r\nconst handleListeners = target => {\r\n  const attributes = target.attributes\r\n  for (const attribute of attributes) {\r\n    if (String(attribute.name).includes('on-')) {\r\n      const fn = attribute.value;\r\n      const name = attribute.name.replace('on-', '');\r\n      target.addEventListener(String(name), event => {\r\n        target = event.path[0];\r\n        while (!target.host) {\r\n          target = target.parentNode;\r\n        }\r\n        if (target.host[fn]) {\r\n          target.host[fn](event);\r\n        }\r\n      });\r\n    }\r\n  }\r\n}\r\n\r\nconst ready = target => {\r\n  requestAnimationFrame(() => {\r\n    if (target.ready) target.ready();\r\n  });\r\n}\r\n\r\nconst constructorCallback = (target=HTMLElement, klass=Function, hasWindow=false) => {\r\n  PubSubLoader(hasWindow);\r\n\r\n  target.fireEvent = target.fireEvent || fireEvent.bind(target);\r\n  target.toJsProp = target.toJsProp || toJsProp.bind(target);\r\n  target.loadScript = target.loadScript || loadScript.bind(target);\r\n\n\n  // setup properties\n  handleProperties(target, klass.properties);\n  handleObservers(target, klass.observers, klass.globalObservers);\n\r\n  if (!target.registered && target.created) target.created();\r\n\r\n  // let backed know the element is registered\r\n  target.registered = true;\r\n}\r\n\r\nconst connectedCallback = (target=HTMLElement, klass=Function) => {\r\n  if (target.connected) target.connected();\r\n  // setup listeners\r\n  handleListeners(target)\r\n  // notify everything is ready\r\n  ready(target);\r\n}\r\n\r\nconst shouldRegister = (name, klass) => {\r\n  if (window.registeredElements.indexOf(name) === -1) {\r\n    window.registeredElements.push(name);\r\n    return true;\r\n  }\r\n  return false;\r\n}\r\n\r\nexport default {\r\n  ready: ready,\r\n  connectedCallback: connectedCallback,\r\n  constructorCallback: constructorCallback,\r\n  shouldRegister: shouldRegister\r\n}\r\n",
+    "static": true,
+    "longname": "src/base.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 5,
+    "kind": "function",
+    "name": "shouldShim",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~shouldShim",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 10,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 6,
+    "kind": "function",
+    "name": "isValidRenderer",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~isValidRenderer",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 14,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "renderer",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 7,
+    "kind": "function",
+    "name": "handleProperties",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~handleProperties",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 21,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "target",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "properties",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 8,
+    "kind": "function",
+    "name": "handleProperty",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~handleProperty",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 32,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "obj",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "property",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "objectPattern2",
+        "types": [
+          "{\"observer\": *, \"strict\": *, \"global\": *, \"reflect\": *, \"render\": *, \"value\": *}"
+        ],
+        "defaultRaw": {
+          "observer": null,
+          "strict": null,
+          "global": null,
+          "reflect": null,
+          "render": null,
+          "value": null
+        },
+        "defaultValue": "{\"observer\":null,\"strict\":null,\"global\":null,\"reflect\":null,\"render\":null,\"value\":null}"
+      }
+    ]
+  },
+  {
+    "__docId__": 9,
+    "kind": "function",
+    "name": "_needsObserverSetup",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~_needsObserverSetup",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 54,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "obj",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "property",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "boolean"
+      ]
+    }
+  },
+  {
+    "__docId__": 10,
+    "kind": "function",
+    "name": "forObservers",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~forObservers",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 68,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "target",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "observers",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "isGlobal",
+        "optional": true,
+        "types": [
+          "boolean"
+        ],
+        "defaultRaw": false,
+        "defaultValue": "false"
+      }
+    ]
+  },
+  {
+    "__docId__": 11,
+    "kind": "function",
+    "name": "setupObserver",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~setupObserver",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": "Runs a method on target whenever given property changes\n\nexample:\nchange(change) {\n change.property // name of the property\n change.value // value of the property\n}",
+    "lineNumber": 98,
+    "unknown": [
+      {
+        "tagName": "@arg",
+        "tagValue": "{object} obj target"
+      },
+      {
+        "tagName": "@arg",
+        "tagValue": "{string} property name"
+      },
+      {
+        "tagName": "@arg",
+        "tagValue": "{boolean} strict"
+      },
+      {
+        "tagName": "@arg",
+        "tagValue": "{method} fn The method to run on change"
+      }
+    ],
+    "params": [
+      {
+        "name": "obj",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "property",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "fn",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "objectPattern3",
+        "types": [
+          "{\"strict\": *, \"global\": *, \"reflect\": *, \"renderer\": *}"
+        ],
+        "defaultRaw": {
+          "strict": null,
+          "global": null,
+          "reflect": null,
+          "renderer": null
+        },
+        "defaultValue": "{\"strict\":null,\"global\":null,\"reflect\":null,\"renderer\":null}"
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 12,
+    "kind": "function",
+    "name": "handleObservers",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~handleObservers",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 143,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "target",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "observers",
+        "optional": true,
+        "types": [
+          "*[]"
+        ],
+        "defaultRaw": [],
+        "defaultValue": "[]"
+      },
+      {
+        "name": "globalObservers",
+        "optional": true,
+        "types": [
+          "*[]"
+        ],
+        "defaultRaw": [],
+        "defaultValue": "[]"
+      }
+    ]
+  },
+  {
+    "__docId__": 13,
+    "kind": "function",
+    "name": "handleListeners",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~handleListeners",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 150,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "target",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 14,
+    "kind": "function",
+    "name": "ready",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~ready",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 169,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "target",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 15,
+    "kind": "function",
+    "name": "constructorCallback",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~constructorCallback",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 175,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "target",
+        "optional": true,
+        "types": [
+          "*"
+        ],
+        "defaultRaw": "HTMLElement",
+        "defaultValue": "HTMLElement"
+      },
+      {
+        "name": "klass",
+        "optional": true,
+        "types": [
+          "*"
+        ],
+        "defaultRaw": "Function",
+        "defaultValue": "Function"
+      },
+      {
+        "name": "hasWindow",
+        "optional": true,
+        "types": [
+          "boolean"
+        ],
+        "defaultRaw": false,
+        "defaultValue": "false"
+      }
+    ]
+  },
+  {
+    "__docId__": 16,
+    "kind": "function",
+    "name": "connectedCallback",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~connectedCallback",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 193,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "target",
+        "optional": true,
+        "types": [
+          "*"
+        ],
+        "defaultRaw": "HTMLElement",
+        "defaultValue": "HTMLElement"
+      },
+      {
+        "name": "klass",
+        "optional": true,
+        "types": [
+          "*"
+        ],
+        "defaultRaw": "Function",
+        "defaultValue": "Function"
+      }
+    ]
+  },
+  {
+    "__docId__": 17,
+    "kind": "function",
+    "name": "shouldRegister",
+    "memberof": "src/base.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/base.js~shouldRegister",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/base.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 201,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "name",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "klass",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "boolean"
+      ]
+    }
+  },
+  {
+    "__docId__": 18,
+    "kind": "file",
+    "name": "src/internals/bind.js",
+    "content": "'use strict';\r\n/**\r\n * Bind properties\r\n */\r\nexport default (_class_, property, instance) => {\r\n  PubSub.subscribe(property.name, (name, newValue, oldValue) => {\r\n    console.log(_class_);\r\n  });\r\n}\r\n",
+    "static": true,
+    "longname": "src/internals/bind.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 19,
+    "kind": "function",
+    "name": "bind",
+    "memberof": "src/internals/bind.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/bind.js~bind",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/internals/bind.js",
+    "importStyle": "bind",
+    "description": "Bind properties",
+    "lineNumber": 5,
+    "params": [
+      {
+        "name": "_class_",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "property",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "instance",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 20,
+    "kind": "file",
+    "name": "src/internals/fire-event.js",
+    "content": "'use strict';\r\n/**\n * @mixin fireEvent\r\n * @param {string} type name of the event\r\n * @param {object} target HTMLElement to target\r\n * @param {string|boolean|number|object} detail the value to pass\r\n */\r\nexport default (type=null, detail=null, target=document) => {\r\n  target.dispatchEvent(new CustomEvent(type, {detail: detail}));\r\n};\r\n",
+    "static": true,
+    "longname": "src/internals/fire-event.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 21,
+    "kind": "function",
+    "name": "fireevent",
+    "memberof": "src/internals/fire-event.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/fire-event.js~fireevent",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/internals/fire-event.js",
+    "importStyle": "fireevent",
+    "description": "",
+    "lineNumber": 8,
+    "unknown": [
+      {
+        "tagName": "@mixin",
+        "tagValue": "fireEvent"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "type",
+        "description": "name of the event"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "target",
+        "description": "HTMLElement to target"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string",
+          "boolean",
+          "number",
+          "object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "detail",
+        "description": "the value to pass"
+      }
+    ]
+  },
+  {
+    "__docId__": 22,
+    "kind": "file",
+    "name": "src/internals/load-script.js",
+    "content": "'use strict';\nconst loadScript = src => {\n  return new Promise((resolve, reject) => {\n    let script = document.createElement('script');\n    script.src = src;\n    script.onload = result => {\n      resolve(result);\n    }\n    script.onerror = error => {\n      reject(error);\n    }\n    document.body.appendChild(script);\n  });\n}\nexport default loadScript;\n",
+    "static": true,
+    "longname": "src/internals/load-script.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 23,
+    "kind": "function",
+    "name": "loadScript",
+    "memberof": "src/internals/load-script.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/load-script.js~loadScript",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/internals/load-script.js",
+    "importStyle": "loadScript",
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "src",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 24,
+    "kind": "file",
+    "name": "src/internals/pub-sub-loader.js",
+    "content": "'use strict';\r\nimport Pubsub from './pub-sub.js';\nexport default isWindow => {\n  if (isWindow) {\n    window.PubSub = window.PubSub || new Pubsub();\n  } else {\n    global.PubSub = global.PubSub || new Pubsub();\n  }\n}\r\n",
+    "static": true,
+    "longname": "src/internals/pub-sub-loader.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 25,
+    "kind": "function",
+    "name": "pubsubloader",
+    "memberof": "src/internals/pub-sub-loader.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/pub-sub-loader.js~pubsubloader",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/internals/pub-sub-loader.js",
+    "importStyle": "pubsubloader",
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "isWindow",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 26,
+    "kind": "file",
+    "name": "src/internals/pub-sub.js",
+    "content": "'use strict';\r\nexport default class {\r\n\r\n  /**\r\n   * Creates handlers\r\n   */\r\n  constructor() {\r\n    this.handlers = [];\r\n  }\r\n\r\n  /**\r\n   * @param {String} event\r\n   * @param {Method} handler\r\n   * @param {HTMLElement} context\r\n   */\r\n  subscribe(event, handler, context) {\r\n    if (typeof context === 'undefined') {\r\n      context = handler;\r\n    }\r\n    this.handlers.push({event: event, handler: handler.bind(context)});\r\n  }\r\n\r\n  /**\r\n   * @param {String} event\r\n   * @param {String|Number|Boolean|Object|Array} change\n   */\r\n  publish(event, change) {\n    for (let i = 0; i < this.handlers.length; i++) {\r\n      if (this.handlers[i].event === event) {\n        let oldValue = this.handlers[i].oldValue;\n        // dirty checking value, ensures that we don't create a loop\n        if (oldValue !== change.value) {\n          this.handlers[i].handler(change, this.handlers[i].oldValue);\n          this.handlers[i].oldValue = change.value;\n        }\n      }\r\n    }\r\n  }\r\n}\r\n",
+    "static": true,
+    "longname": "src/internals/pub-sub.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 27,
+    "kind": "class",
+    "name": "pubsub",
+    "memberof": "src/internals/pub-sub.js",
+    "static": true,
+    "longname": "src/internals/pub-sub.js~pubsub",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/internals/pub-sub.js",
+    "importStyle": "pubsub",
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "interface": false
+  },
+  {
+    "__docId__": 28,
+    "kind": "constructor",
+    "name": "constructor",
+    "memberof": "src/internals/pub-sub.js~pubsub",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/internals/pub-sub.js~pubsub#constructor",
+    "access": null,
+    "description": "Creates handlers",
+    "lineNumber": 7,
+    "params": []
+  },
+  {
+    "__docId__": 29,
+    "kind": "member",
+    "name": "handlers",
+    "memberof": "src/internals/pub-sub.js~pubsub",
+    "static": false,
+    "longname": "src/internals/pub-sub.js~pubsub#handlers",
+    "access": null,
+    "description": null,
+    "lineNumber": 8,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "*[]"
+      ]
+    }
+  },
+  {
+    "__docId__": 30,
+    "kind": "method",
+    "name": "subscribe",
+    "memberof": "src/internals/pub-sub.js~pubsub",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/internals/pub-sub.js~pubsub#subscribe",
+    "access": null,
+    "description": "",
+    "lineNumber": 16,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "event",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Method"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "handler",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "HTMLElement"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "context",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "__docId__": 31,
+    "kind": "method",
+    "name": "publish",
+    "memberof": "src/internals/pub-sub.js~pubsub",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/internals/pub-sub.js~pubsub#publish",
+    "access": null,
+    "description": "",
+    "lineNumber": 27,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "event",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String",
+          "Number",
+          "Boolean",
+          "Object",
+          "Array"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "change",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "__docId__": 32,
+    "kind": "file",
+    "name": "src/internals/render-status.js",
+    "content": "'use strict';\r\nlet sheduled = false;\r\nconst afterRenderQue = [];\r\nconst beforeRenderQue = [];\r\n\r\nconst callMethod = array => {\r\n  const context = array[0];\r\n  const callback = array[1];\r\n  const args = array[2];\r\n  try {\r\n    callback.apply(context, args);\r\n  } catch(e) {\r\n    setTimeout(() => {\r\n      throw e;\r\n    })\r\n  }\r\n};\r\n\r\nconst flushQue = que => {\r\n  while (que.length) {\r\n    callMethod(que.shift);\r\n  }\r\n};\r\n\r\nconst runQue = que => {\r\n  for (let i=0, l=que.length; i < l; i++) {\r\n    callMethod(que.shift());\r\n  }\n  sheduled = false;\r\n}\r\n\r\nconst shedule = () => {\r\n  sheduled = true;\r\n  requestAnimationFrame(() => {\r\n    flushQue(beforeRenderQue);\r\n    setTimeout(() => {\r\n      runQue(afterRenderQue);\r\n    });\r\n  });\r\n};\r\n\r\nexport default {\r\n  afterRender: (context, callback, args) => {\r\n    if (!sheduled) {\r\n      shedule();\r\n    }\r\n    afterRenderQue.push([context, callback, args]);\r\n  },\r\n  beforeRender: (context, callback, args) => {\r\n    if (!sheduled) {\r\n      shedule();\r\n    }\r\n    beforeRenderQue.push([context, callback, args]);\r\n  }\r\n\r\n}\r\n",
+    "static": true,
+    "longname": "src/internals/render-status.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 33,
+    "kind": "variable",
+    "name": "sheduled",
+    "memberof": "src/internals/render-status.js",
+    "static": true,
+    "longname": "src/internals/render-status.js~sheduled",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/internals/render-status.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "boolean"
+      ]
+    }
+  },
+  {
+    "__docId__": 34,
+    "kind": "variable",
+    "name": "afterRenderQue",
+    "memberof": "src/internals/render-status.js",
+    "static": true,
+    "longname": "src/internals/render-status.js~afterRenderQue",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/internals/render-status.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "*[]"
+      ]
+    }
+  },
+  {
+    "__docId__": 35,
+    "kind": "variable",
+    "name": "beforeRenderQue",
+    "memberof": "src/internals/render-status.js",
+    "static": true,
+    "longname": "src/internals/render-status.js~beforeRenderQue",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/internals/render-status.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "*[]"
+      ]
+    }
+  },
+  {
+    "__docId__": 36,
+    "kind": "function",
+    "name": "callMethod",
+    "memberof": "src/internals/render-status.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/render-status.js~callMethod",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/internals/render-status.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "array",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 37,
+    "kind": "function",
+    "name": "flushQue",
+    "memberof": "src/internals/render-status.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/render-status.js~flushQue",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/internals/render-status.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 19,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "que",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 38,
+    "kind": "function",
+    "name": "runQue",
+    "memberof": "src/internals/render-status.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/render-status.js~runQue",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/internals/render-status.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 25,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "que",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 39,
+    "kind": "function",
+    "name": "shedule",
+    "memberof": "src/internals/render-status.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/render-status.js~shedule",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/internals/render-status.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 32,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": []
+  },
+  {
+    "__docId__": 40,
+    "kind": "file",
+    "name": "src/internals/to-js-prop.js",
+    "content": "'use strict';\r\n/**\r\n * @mixin Backed\r\n *\r\n * some-prop -> someProp\r\n *\r\n * @arg {string} string The content to convert\r\n * @return {string} string\r\n */\r\nexport default string => {\r\n  let parts = string.split('-');\r\n  if (parts.length > 1) {\r\n    var upper = parts[1].charAt(0).toUpperCase();\r\n    string = parts[0] + upper + parts[1].slice(1).toLowerCase();\r\n  }\r\n  return string;\r\n};\r\n",
+    "static": true,
+    "longname": "src/internals/to-js-prop.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 41,
+    "kind": "function",
+    "name": "tojsprop",
+    "memberof": "src/internals/to-js-prop.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/internals/to-js-prop.js~tojsprop",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/internals/to-js-prop.js",
+    "importStyle": "tojsprop",
+    "description": "",
+    "lineNumber": 10,
+    "unknown": [
+      {
+        "tagName": "@mixin",
+        "tagValue": "Backed\n\nsome-prop -> someProp"
+      },
+      {
+        "tagName": "@arg",
+        "tagValue": "{string} string The content to convert"
+      }
+    ],
+    "params": [
+      {
+        "name": "string",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "string"
+      ],
+      "spread": false,
+      "description": "string"
+    }
+  },
+  {
+    "__docId__": 42,
+    "kind": "file",
+    "name": "src/poly-loader.js",
+    "content": "'use strict';\r\nimport loadScript from './internals/load-script';\r\n\r\nconst bowerMinUrl = (name, main, root) => {\r\n  const url = main ? `${name}/${main}` : `${name}/${name}`;\r\n  return `${root}/${url}.min.js`;\r\n}\r\n\r\nconst ensureArray = array => {\r\n  if (Array.isArray(array)) {\r\n    return array;\r\n  }\r\n  return [...array];\r\n}\r\n\r\n/**\r\n * @module polyLoader\r\n * @param {string} name package name (folder)\r\n * @param {string} main script to use\r\n * @param {string} root location of your components\r\n */\r\nexport default (fills, root='bower_components') => {\r\n  return new Promise((resolve, reject) => {\r\n    fills = ensureArray(fills);\r\n    fills = fills.map(fill => {\r\n      let name;\r\n      let main = null;\r\n      if (typeof(fill) === 'object') {\r\n        name = fill.name;\r\n        main = fill.main;\r\n      } else {\r\n        name = fill;\r\n      }\r\n      if (name === 'shadycss' && !main) {\r\n        main = 'custom-style-interface';\r\n      }\r\n      return loadScript(bowerMinUrl(name, main, root));\r\n    });\r\n    Promise.all(fills).then(() => resolve()).catch(error => reject(error));\r\n  });\r\n}\r\n",
+    "static": true,
+    "longname": "src/poly-loader.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 43,
+    "kind": "function",
+    "name": "bowerMinUrl",
+    "memberof": "src/poly-loader.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/poly-loader.js~bowerMinUrl",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/poly-loader.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "name",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "main",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "root",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "string"
+      ]
+    }
+  },
+  {
+    "__docId__": 44,
+    "kind": "function",
+    "name": "ensureArray",
+    "memberof": "src/poly-loader.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/poly-loader.js~ensureArray",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/poly-loader.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "array",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "undefined[]"
+      ]
+    }
+  },
+  {
+    "__docId__": 45,
+    "kind": "function",
+    "name": "polyloader",
+    "memberof": "src/poly-loader.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/poly-loader.js~polyloader",
+    "access": null,
+    "export": true,
+    "importPath": "backed/src/poly-loader.js",
+    "importStyle": "polyloader",
+    "description": "",
+    "lineNumber": 22,
+    "unknown": [
+      {
+        "tagName": "@module",
+        "tagValue": "polyLoader"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "name",
+        "description": "package name (folder)"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "main",
+        "description": "script to use"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "root",
+        "description": "location of your components"
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 46,
+    "kind": "file",
+    "name": "src/warnings.js",
+    "content": "const _warnings = [];\r\n\r\nconst warnings = {\r\n  CESV0: 'Backed uses a ready method as lifeCycleCallback, please see the documentation for more info',\r\n  CESV1: 'Backed uses a ready method as lifeCycleCallback, things should work fine when CESV1 is supported, but CESV0 not, please see the documentation for more info'\r\n};\r\n\r\nconst warn = (name, warning) => {\r\n  if (!_warnings[warning]) {\r\n    console.warn(`${name}::${warnings[warning]}`);\r\n    _warnings.push(warning);\r\n  }\r\n}\r\n\r\nexport default {\r\n  warn: warn\r\n}\r\n",
+    "static": true,
+    "longname": "src/warnings.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 47,
+    "kind": "variable",
+    "name": "_warnings",
+    "memberof": "src/warnings.js",
+    "static": true,
+    "longname": "src/warnings.js~_warnings",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/warnings.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 1,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "*[]"
+      ]
+    }
+  },
+  {
+    "__docId__": 48,
+    "kind": "variable",
+    "name": "warnings",
+    "memberof": "src/warnings.js",
+    "static": true,
+    "longname": "src/warnings.js~warnings",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/warnings.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "{\"CESV0\": string, \"CESV1\": string}"
+      ]
+    }
+  },
+  {
+    "__docId__": 49,
+    "kind": "function",
+    "name": "warn",
+    "memberof": "src/warnings.js",
+    "generator": false,
+    "async": false,
+    "static": true,
+    "longname": "src/warnings.js~warn",
+    "access": null,
+    "export": false,
+    "importPath": "backed/src/warnings.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 8,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "name": "name",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "warning",
+        "types": [
+          "*"
+        ]
+      }
+    ]
+  },
+  {
+    "__docId__": 51,
+    "kind": "external",
+    "name": "Infinity",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Infinity",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Infinity",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 52,
+    "kind": "external",
+    "name": "NaN",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~NaN",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 53,
+    "kind": "external",
+    "name": "undefined",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~undefined",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 54,
+    "kind": "external",
+    "name": "null",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~null",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 55,
+    "kind": "external",
+    "name": "Object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 56,
+    "kind": "external",
+    "name": "object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 57,
+    "kind": "external",
+    "name": "Function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 58,
+    "kind": "external",
+    "name": "function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 59,
+    "kind": "external",
+    "name": "Boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 60,
+    "kind": "external",
+    "name": "boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 61,
+    "kind": "external",
+    "name": "Symbol",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Symbol",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 62,
+    "kind": "external",
+    "name": "Error",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Error",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 63,
+    "kind": "external",
+    "name": "EvalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~EvalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 64,
+    "kind": "external",
+    "name": "InternalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/InternalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~InternalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 65,
+    "kind": "external",
+    "name": "RangeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RangeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 66,
+    "kind": "external",
+    "name": "ReferenceError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ReferenceError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 67,
+    "kind": "external",
+    "name": "SyntaxError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~SyntaxError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 68,
+    "kind": "external",
+    "name": "TypeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~TypeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 69,
+    "kind": "external",
+    "name": "URIError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~URIError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 70,
+    "kind": "external",
+    "name": "Number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 71,
+    "kind": "external",
+    "name": "number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 72,
+    "kind": "external",
+    "name": "Date",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Date",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 73,
+    "kind": "external",
+    "name": "String",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~String",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 74,
+    "kind": "external",
+    "name": "string",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~string",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 75,
+    "kind": "external",
+    "name": "RegExp",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RegExp",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 76,
+    "kind": "external",
+    "name": "Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 77,
+    "kind": "external",
+    "name": "Int8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 78,
+    "kind": "external",
+    "name": "Uint8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 79,
+    "kind": "external",
+    "name": "Uint8ClampedArray",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8ClampedArray",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 80,
+    "kind": "external",
+    "name": "Int16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 81,
+    "kind": "external",
+    "name": "Uint16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 82,
+    "kind": "external",
+    "name": "Int32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 83,
+    "kind": "external",
+    "name": "Uint32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 84,
+    "kind": "external",
+    "name": "Float32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 85,
+    "kind": "external",
+    "name": "Float64Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float64Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 86,
+    "kind": "external",
+    "name": "Map",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Map",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 87,
+    "kind": "external",
+    "name": "Set",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Set",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 88,
+    "kind": "external",
+    "name": "WeakMap",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakMap",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 89,
+    "kind": "external",
+    "name": "WeakSet",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakSet",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 90,
+    "kind": "external",
+    "name": "ArrayBuffer",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ArrayBuffer",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 91,
+    "kind": "external",
+    "name": "DataView",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~DataView",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 92,
+    "kind": "external",
+    "name": "JSON",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~JSON",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 93,
+    "kind": "external",
+    "name": "Promise",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Promise",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 94,
+    "kind": "external",
+    "name": "Generator",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Generator",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 95,
+    "kind": "external",
+    "name": "GeneratorFunction",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~GeneratorFunction",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 96,
+    "kind": "external",
+    "name": "Reflect",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Reflect",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Reflect",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 97,
+    "kind": "external",
+    "name": "Proxy",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Proxy",
+    "access": null,
+    "description": "",
+    "lineNumber": 193,
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 99,
+    "kind": "external",
+    "name": "CanvasRenderingContext2D",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~CanvasRenderingContext2D",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 100,
+    "kind": "external",
+    "name": "DocumentFragment",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~DocumentFragment",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 101,
+    "kind": "external",
+    "name": "Element",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Element",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 102,
+    "kind": "external",
+    "name": "Event",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Event",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 103,
+    "kind": "external",
+    "name": "Node",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Node",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 104,
+    "kind": "external",
+    "name": "NodeList",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/NodeList",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~NodeList",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 105,
+    "kind": "external",
+    "name": "XMLHttpRequest",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 106,
+    "kind": "external",
+    "name": "AudioContext",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/AudioContext",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~AudioContext",
+    "access": null,
+    "description": "",
+    "lineNumber": 34,
+    "builtinExternal": true
+  }
+]

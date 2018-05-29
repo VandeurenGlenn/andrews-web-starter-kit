@@ -1,0 +1,54 @@
+{
+  "coverage": "66.66%",
+  "expectCount": 12,
+  "actualCount": 8,
+  "files": {
+    "src/backed.js": {
+      "expectCount": 1,
+      "actualCount": 1,
+      "undocumentLines": []
+    },
+    "src/internals/bind.js": {
+      "expectCount": 1,
+      "actualCount": 1,
+      "undocumentLines": []
+    },
+    "src/internals/pub-sub.js": {
+      "expectCount": 5,
+      "actualCount": 3,
+      "undocumentLines": [
+        8,
+        2
+      ]
+    },
+    "src/internals/fire-event.js": {
+      "expectCount": 1,
+      "actualCount": 1,
+      "undocumentLines": []
+    },
+    "src/internals/load-script.js": {
+      "expectCount": 1,
+      "actualCount": 0,
+      "undocumentLines": [
+        2
+      ]
+    },
+    "src/poly-loader.js": {
+      "expectCount": 1,
+      "actualCount": 1,
+      "undocumentLines": []
+    },
+    "src/internals/pub-sub-loader.js": {
+      "expectCount": 1,
+      "actualCount": 0,
+      "undocumentLines": [
+        3
+      ]
+    },
+    "src/internals/to-js-prop.js": {
+      "expectCount": 1,
+      "actualCount": 1,
+      "undocumentLines": []
+    }
+  }
+}

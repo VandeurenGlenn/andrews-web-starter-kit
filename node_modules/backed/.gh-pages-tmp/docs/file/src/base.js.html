@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/base.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="https://github.com/vandeurenglenn/backed" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-backed">backed</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-polyloader">polyloader</a></span></span></li>
+<li data-ice="doc"><div data-ice="dirPath" class="nav-dir-path">internals</div><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/internals/pub-sub.js~pubsub.html">pubsub</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-bind">bind</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fireevent">fireevent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-loadScript">loadScript</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-pubsubloader">pubsubloader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-tojsprop">tojsprop</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/base.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">&apos;use strict&apos;;
+import fireEvent from &apos;./internals/fire-event.js&apos;;
+import toJsProp from &apos;./internals/to-js-prop.js&apos;;
+import loadScript from &apos;./internals/load-script.js&apos;;
+import PubSubLoader from &apos;./internals/pub-sub-loader.js&apos;;
+import { render } from &apos;./../node_modules/lit-html/lit-html.js&apos;
+
+window.registeredElements = window.registeredElements || [];
+
+const shouldShim = () =&gt; {
+  return /Edge/.test(navigator.userAgent) || /Firefox/.test(navigator.userAgent);
+}
+
+const isValidRenderer = renderer =&gt; {
+  if (!renderer) {
+    return;
+  }
+  return String(renderer).includes(&apos;return html`&apos;)
+}
+
+const handleProperties = (target, properties) =&gt; {
+  if (properties) {
+    for (let entry of Object.entries(properties)) {
+      handleProperty(target, entry[0], entry[1]);
+      // TODO: are we ignoring stuff ...?
+      // check if attribute has value else pass default property value
+      target[entry[0]] = target.hasAttribute(entry[0]) ? target.getAttribute(entry[0]) : entry[1].value;
+    }
+  }
+}
+
+const handleProperty = (obj, property, {observer, strict, global, reflect, render, value }) =&gt; {
+
+  if (Boolean(observer || global) &amp;&amp; _needsObserverSetup(obj, property)) {
+    // Ensure we don&apos;t do duplicate work
+    obj.observedProperties.push(property);
+
+    // subscribe only when a callback is defined, all other global options are still available ...
+    if (global &amp;&amp; obj[observer]) {
+      // Warning, global observers don&apos;t work the same like bindings, each observer has it&apos;s namespace created like global.name,
+      // so whenever another element has an global observer for name, they will subscribe to the same publisher !
+      // TODO: Add local binding &amp; improve global observers
+      // {{name}} for normal bindings &amp; {{global::name}} for global bindings(observers) (like Polymer does)
+      // this means we need to build a system that keeps track of each component it&apos;s bindings &amp;
+      // values should be set as property, so we know if a value needs to be set on attribute, rerender template, etc ..
+      PubSub.subscribe(`global.${property}`, obj[observer].bind(obj));
+    }
+    setupObserver(obj, property, observer, {strict, global, reflect, renderer: render})
+  } else if (!Boolean(observer || global) &amp;&amp; Boolean(reflect || render)) {
+    setupObserver(obj, property, observer, {strict, global, reflect, renderer: render})
+  }
+}
+
+const _needsObserverSetup = (obj, property) =&gt; {
+  if (!obj.observedProperties) {
+    obj.observedProperties = [];
+  }
+  if (obj.observedProperties[property]) {
+    console.warn(
+      &apos;observer::ignoring duplicate property observer &apos; + property
+    );
+    return false;
+  } else {
+    return true;
+  }
+}
+
+const forObservers = (target, observers, isGlobal=false) =&gt; {
+  for (let observe of observers) {
+    let parts = observe.split(/\(|\)/g);
+    let fn = parts[0];
+    parts = parts.slice(1);
+    for (let property of parts) {
+      if (property.length) {
+        handleProperty(target, property, fn, {
+          strict: false,
+          global: isGlobal
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Runs a method on target whenever given property changes
+ *
+ * example:
+ * change(change) {
+ *  change.property // name of the property
+ *  change.value // value of the property
+ * }
+ *
+ * @arg {object} obj target
+ * @arg {string} property name
+ * @arg {boolean} strict
+ * @arg {method} fn The method to run on change
+ */
+const setupObserver = (obj, property, fn, {strict, global, reflect, renderer}) =&gt; {
+  Object.defineProperty(obj, property, {
+    set(value) {
+      if (value === undefined) {
+        return
+      }
+      if (this[`_${property}`] === value) {
+        return;
+      }
+      this[`_${property}`] = value;
+      let data = {
+        property: property,
+        value: value
+      };
+      if (reflect) {
+        if (value) this.setAttribute(property, String(value));
+        else this.removeAttribute(property);
+      }
+      if (renderer) {
+        if (typeof renderer === &apos;boolean&apos;) {
+          render(this.render(), this.shadowRoot);
+        } else {
+          // adds support for multiple renderers
+          render(this[renderer](), this.shadowRoot);
+        }
+      }
+      if (global) {
+        data.instance = this;
+        PubSub.publish(`global.${property}`, data);
+      } else if(fn) {
+        if (this[fn]) {
+          this[fn](data);
+        } else {
+          console.warn(`observer undefined::${fn} is not a function`);
+        }
+      }
+    },
+    get() {
+      return this[`_${property}`];
+    },
+    configurable: strict ? false : true
+  });
+}
+
+
+const handleObservers = (target, observers=[], globalObservers=[]) =&gt; {
+  if (!observers &amp;&amp; !globalObservers) {
+    return;
+  }
+  forObservers(target, observers);
+}
+
+const handleListeners = target =&gt; {
+  const attributes = target.attributes
+  for (const attribute of attributes) {
+    if (String(attribute.name).includes(&apos;on-&apos;)) {
+      const fn = attribute.value;
+      const name = attribute.name.replace(&apos;on-&apos;, &apos;&apos;);
+      target.addEventListener(String(name), event =&gt; {
+        target = event.path[0];
+        while (!target.host) {
+          target = target.parentNode;
+        }
+        if (target.host[fn]) {
+          target.host[fn](event);
+        }
+      });
+    }
+  }
+}
+
+const ready = target =&gt; {
+  requestAnimationFrame(() =&gt; {
+    if (target.ready) target.ready();
+  });
+}
+
+const constructorCallback = (target=HTMLElement, klass=Function, hasWindow=false) =&gt; {
+  PubSubLoader(hasWindow);
+
+  target.fireEvent = target.fireEvent || fireEvent.bind(target);
+  target.toJsProp = target.toJsProp || toJsProp.bind(target);
+  target.loadScript = target.loadScript || loadScript.bind(target);
+
+
+  // setup properties
+  handleProperties(target, klass.properties);
+  handleObservers(target, klass.observers, klass.globalObservers);
+
+  if (!target.registered &amp;&amp; target.created) target.created();
+
+  // let backed know the element is registered
+  target.registered = true;
+}
+
+const connectedCallback = (target=HTMLElement, klass=Function) =&gt; {
+  if (target.connected) target.connected();
+  // setup listeners
+  handleListeners(target)
+  // notify everything is ready
+  ready(target);
+}
+
+const shouldRegister = (name, klass) =&gt; {
+  if (window.registeredElements.indexOf(name) === -1) {
+    window.registeredElements.push(name);
+    return true;
+  }
+  return false;
+}
+
+export default {
+  ready: ready,
+  connectedCallback: connectedCallback,
+  constructorCallback: constructorCallback,
+  shouldRegister: shouldRegister
+}
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.5.2)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
