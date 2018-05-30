@@ -19,25 +19,24 @@
     <link rel="apple-touch-icon-precomposed" href="apple-touch-icon.png">
     <style>
       html, body {
-        width: 100%;
-        height: 100%;
+        display: block;
+        overflow: hidden;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
       }
       body {
         margin: 0;
       }
     </style>
-    <script>
-      window.esImportsSupported = false;
-    </script>
-    <script type="module">
-      window.esImportsSupported = true;
-      import './src/awsk-shell.js';
-    </script>
     <!-- support browsers without es6-module support -->
-    <script src="dist/awsk-shell.js" nomodule></script>
   </head>
   <body>
     <!-- properties can be set using attributes, check the title property in awsk-shell ... -->
-    <awsk-shell title="awsk"></awsk-shell>
+    <span class="awsk-shell"></span>
+    <script src="src/awsk-shell.js"></script>
+    <script src="src/views/home-view.js"></script>
   </body>
 </html>

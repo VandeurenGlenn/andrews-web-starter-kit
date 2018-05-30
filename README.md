@@ -1,20 +1,6 @@
 # Andrew's Web Starter Kit :metal:
 > Minimal starter-kit for web development
 
-## Features
-- Dynamic Imports
-- Bundling with rollup
-- [CustomRendererMixin][custom-renderer-mixin]
-- [PropertyMixin][property-mixin]
-- [CSSMixin][css-mixin]
-- Bundled finishes loading around ```70``` ms
-- Modulair finishes loading around ```153``` ms
-
-## Prerequisites
-1. [Node.js][node-url] - used to run JavaScript tools from the command line.
-2. [Yarn][yarn-url] - Fast, reliable, and secure dependency management.(or npm)
-
-
 ## Quick-start
 1. Download [zip][zip-url] & extract
 2. Go to extracted directory
