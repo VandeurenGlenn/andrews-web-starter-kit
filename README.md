@@ -1,6 +1,9 @@
 # Andrew's Web Starter Kit :metal:
 > Minimal starter-kit for web development
 
+## Preword
+If you like an example how things were done before we had classes, customElements etc then checkout the [vanilla][vanilla-branch] branch.
+
 ## Features
 - Dynamic Imports
 - Bundling with rollup
@@ -42,3 +45,4 @@ All rights reserved.
 [custom-renderer-mixin]: https://github.com/VandeurenGlenn/custom-renderer-mixin
 [property-mixin]: https://github.com/VandeurenGlenn/backed/src/mixins/property-mixin
 [css-mixin]: https://github.com/VandeurenGlenn/backed/src/mixins/css-mixin
+[vanilla-branch]: https://github.com/VandeurenGlenn/andrews-web-starter-kit/tree/vanilla
