@@ -7,7 +7,7 @@
   "license": "MIT",
   "flat": true,
   "scripts": {
-    "install": "yarn build",
+    "install": "npm run build",
     "deploy": "sh build-scripts/gh-pages.sh",
     "build": "rollup -c",
     "serve": "live-server --port=2020"

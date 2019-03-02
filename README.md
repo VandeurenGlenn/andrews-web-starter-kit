@@ -21,20 +21,21 @@ If you like an example how things were done before we had classes, customElement
 ## Quick-start
 1. Download [zip][zip-url] & extract
 2. Go to extracted directory
-3. Open terminal & type ```yarn && yarn serve```
+3. Open terminal & type ```yarn && yarn serve``` or ```npm run serve```
 4. Set origin to your repo ```git remote remove origin && git remote add origin https://your-repo``` (not needed when forked)
 5. Push to your repo
 
 ## Workflow
 1. Open terminal
-2. Start reload server (watcher) ```yarn serve```
+2. Start reload server (watcher) ```yarn serve``` or ``` npm i && npm run serve ```
 3. Make changes
+4. Build ```yarn build``` or ```npm run build```
 
 ![hero-url]
 
 ## License
 
-Copyright (c) 2017 VandeurenGlenn <vandeurenglenn@gmail.com>
+Copyright (c) 2019 VandeurenGlenn <vandeurenglenn@gmail.com>
 All rights reserved.
 
 [node-url]: https://nodejs.org
