@@ -15,7 +15,7 @@
   "dependencies": {
     "custom-app-layout": "^0.10.3",
     "custom-header": "^0.10.0",
-    "custom-pages": "^0.12.0",
+    "custom-pages": "^0.12.1",
     "custom-renderer-mixin": "^0.1.10"
   },
   "devDependencies": {
