@@ -6,10 +6,7 @@ REF=$(git rev-parse --verify HEAD)
 MSG="Deployed to Github pages: ${REF}"
 
 mkdir -p .gh-pages-tmp
-cp node_modules .gh-pages-tmp/node_modules -r
-cp src .gh-pages-tmp/src -r
-cp dist .gh-pages-tmp/dist -r
-cp index.html .gh-pages-tmp/index.html
+cp www/** .gh-pages-tmp -r
 
 cd .gh-pages-tmp
 git init

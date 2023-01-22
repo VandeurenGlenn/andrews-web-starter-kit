@@ -1,10 +1,10 @@
-import RenderMixin from '../../node_modules/custom-renderer-mixin/src/render-mixin.js';
-export default customElements.define('home-view', class HomeView extends RenderMixin(HTMLElement) {
+import { LitElement, html}  from 'lit'
+export default customElements.define('home-view', class HomeView extends LitElement {
   constructor() {
     super();
     this.attachShadow({mode: 'open'})
   }
-  get template() {
+  render() {
     return html`
       <style>
         :host {

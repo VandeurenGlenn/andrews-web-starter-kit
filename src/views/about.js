@@ -1,11 +1,10 @@
-import RenderMixin from '../../node_modules/custom-renderer-mixin/src/render-mixin.js';
-import CSSMixin from '../../node_modules/backed/src/mixins/css-mixin.js';
-export default customElements.define('about-view', class AboutView extends RenderMixin(CSSMixin(HTMLElement)) {
+import { LitElement, html } from 'lit'
+export default customElements.define('about-view', class AboutView extends LitElement {
   constructor() {
     super();
     this.attachShadow({mode: 'open'})
   }
-  get template() {
+  render() {
     return html`
       <style>
         :host {
@@ -17,7 +16,6 @@ export default customElements.define('about-view', class AboutView extends Rende
           margin: 0;
           padding-bottom: 32px;
         }
-        apply(--css-flex)
       </style>
       <h1>About</h1>
 
