@@ -2,20 +2,19 @@
 > Minimal starter-kit for web development
 
 ## Preword
+### vanilla
 If you like an example how things were done before we had classes, customElements etc then checkout the [vanilla][vanilla-branch] branch.
+### custom-renderer
+If you like an example how things were done using custom-renderer, then checkout the [custom-renderer][custom-renderer-branch] branch.
 
 ## Features
 - Dynamic Imports
 - Bundling with rollup
-- [CustomRendererMixin][custom-renderer-mixin]
-- [PropertyMixin][property-mixin]
-- [CSSMixin][css-mixin]
-- Bundled finishes loading around ```70``` ms
-- Modulair finishes loading around ```153``` ms
+- Lit
 
 ## Prerequisites
 1. [Node.js][node-url] - used to run JavaScript tools from the command line.
-2. [Yarn][yarn-url] - Fast, reliable, and secure dependency management.(or npm)
+2. [NPM][npm-url] - Fast, reliable, and secure dependency management.(or [Yarn][yarn-url])
 
 
 ## Quick-start
@@ -30,20 +29,19 @@ If you like an example how things were done before we had classes, customElement
 2. Start reload server (watcher) ```yarn serve``` or ``` npm i && npm run serve ```
 3. Make changes
 4. Build ```yarn build``` or ```npm run build```
+or watch changes using ```npm run watch```
+
 
 ![hero-url]
 
 ## License
 
-Copyright (c) 2019 VandeurenGlenn <vandeurenglenn@gmail.com>
+Copyright (c) 2023 VandeurenGlenn <vandeurenglenn@gmail.com>
 All rights reserved.
 
 [node-url]: https://nodejs.org
 [yarn-url]: https://yarnpkg.com
-[backed-cli-url]: https://github.com/VandeurenGlenn/backed-cli
 [zip-url]: https://github.com/VandeurenGlenn/andrews-web-starter-kit/archive/master.zip
 [hero-url]: hero.png
-[custom-renderer-mixin]: https://github.com/VandeurenGlenn/custom-renderer-mixin
-[property-mixin]: https://github.com/VandeurenGlenn/backed/src/mixins/property-mixin
-[css-mixin]: https://github.com/VandeurenGlenn/backed/src/mixins/css-mixin
+[lit]: https://lit.dev
 [vanilla-branch]: https://github.com/VandeurenGlenn/andrews-web-starter-kit/tree/vanilla

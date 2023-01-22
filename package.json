@@ -5,36 +5,24 @@
   "repository": "https://github.com/vandeurenglenn/andrews-web-starter-kit",
   "author": "Glenn Vandeuren",
   "license": "MIT",
+  "type": "module",
   "flat": true,
   "scripts": {
-    "install": "npm run build",
     "deploy": "sh build-scripts/gh-pages.sh",
     "build": "rollup -c",
-    "serve": "live-server --port=2020"
+    "watch": "rollup -c -w",
+    "serve": "node server.js"
   },
   "dependencies": {
-    "custom-app-layout": "^0.10.3",
-    "custom-header": "^0.10.0",
-    "custom-pages": "^0.12.0",
-    "custom-renderer-mixin": "^0.1.10"
+    "custom-pages": "^0.12.1",
+    "lit": "^2.6.1"
   },
   "devDependencies": {
-    "live-server": "^1.2.0",
-    "rollup": "^0.59.4"
-  },
-  "resolutions": {
-    "backed": "0.12.2",
-    "kind-of": "6.0.2",
-    "is-number": "4.0.0",
-    "safe-buffer": "5.1.2",
-    "minimist": "1.2.0",
-    "debug": "2.6.9",
-    "ms": "2.0.0",
-    "string-width": "2.1.1",
-    "strip-ansi": "4.0.0",
-    "is-fullwidth-code-point": "2.0.0",
-    "ansi-regex": "3.0.0",
-    "statuses": "1.5.0",
-    "object-assign": "4.1.1"
+    "@rollup/plugin-json": "^6.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "koa": "^2.14.1",
+    "koa-static": "^5.0.0",
+    "rimraf": "^4.1.1",
+    "rollup": "^3.10.1"
   }
 }

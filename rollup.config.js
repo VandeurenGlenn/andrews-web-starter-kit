@@ -1,24 +1,16 @@
+import resolve from '@rollup/plugin-node-resolve'
+import json from '@rollup/plugin-json'
+
 export default [
-	// iife , for older browsers
   {
-    input: 'src/awsk-shell.js',
+    input: ['src/shell.js', 'src/views/about.js'],
     output: {
-      file: 'dist/awsk-shell.js',
-      name: 'AwskShell',
-      format: 'iife',
-      sourcemap: false
+      dir: 'www',
+      format: 'es',
     },
-    experimentalCodeSplitting: false,
-    experimentalDynamicImport: false
-  }, {
-    input: 'src/views/about-view.js',
-    output: {
-      file: 'dist/views/about-view.js',
-      name: 'AboutView',
-      format: 'iife',
-      sourcemap: false
-    },
-    experimentalCodeSplitting: false,
-    experimentalDynamicImport: false
+    plugins: [
+      json(),
+      resolve()
+    ]
   }
 ]
