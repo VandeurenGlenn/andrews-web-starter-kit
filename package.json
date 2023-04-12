@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "custom-pages": "^0.12.1",
-    "lit": "^2.6.1"
+    "lit": "^2.7.0"
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.0.0",
